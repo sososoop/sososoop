@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     template: '%s | 소소숲',
   },
   description: SITE_DESCRIPTION,
-  keywords: ['언어재활사', 'AI 활용', '교육 콘텐츠', '소소숲', '이루다쌤'],
+  keywords: ['언어재활사', 'AI 활용', '교육 콘텐츠', '소소숲', '이승윤', '언어재활사 이승윤'],
   other: {
     // 구글 애드센스 사이트 소유권 인증 메타태그
     'google-adsense-account': ADSENSE_CLIENT,

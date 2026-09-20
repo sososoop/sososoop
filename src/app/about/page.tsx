@@ -75,7 +75,7 @@ export default function AboutPage() {
 
           {/* 프로필 카드 */}
           <div className="bg-canvas rounded-[24px] p-8 mb-8 border border-hairline">
-            <h3 className="text-[24px] font-semibold text-ink mb-1">이루다쌤</h3>
+            <h3 className="text-[24px] font-semibold text-ink mb-1">언어재활사 이승윤</h3>
             <p className="text-[15px] text-ink-muted mb-5">기록으로 배움을 잇는 사람</p>
             <p className="text-[14px] text-primary font-semibold mb-6">
               언어재활사 · AI 활용 강사 · 교육 콘텐츠 제작자
