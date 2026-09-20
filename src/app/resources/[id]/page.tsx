@@ -2,19 +2,18 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { freeResources, paidResources, type Resource } from '@/data/resources';
-import { getResources } from '@/lib/notion';
+import { getResourcesCached } from '@/lib/notion';
+import { createClient } from '@/lib/supabase/server';
 import BuyButtons from '@/components/BuyButtons';
 
-export const revalidate = 60;
+// 무료 자료도 로그인 회원에게만 열어주므로 요청마다 세션을 확인한다.
+// (Notion 조회는 getResourcesCached가 60초 캐시)
+export const dynamic = 'force-dynamic';
 
 const staticAll = [...freeResources, ...paidResources];
 
 async function loadAll(): Promise<Resource[]> {
-  return (await getResources()) ?? staticAll;
-}
-
-export async function generateStaticParams() {
-  return paidResources.map((r) => ({ id: r.id }));
+  return (await getResourcesCached()) ?? staticAll;
 }
 
 export async function generateMetadata({
@@ -37,6 +36,12 @@ export default async function ResourceDetailPage({
   const resource = (await loadAll()).find((r) => r.id === id);
 
   if (!resource) notFound();
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const loginHref = `/login?next=${encodeURIComponent(`/resources/${id}`)}`;
 
   const isPaid = resource.type === 'paid' && typeof resource.price === 'number' && resource.price > 0;
 
@@ -109,6 +114,20 @@ export default async function ResourceDetailPage({
                   price={resource.price as number}
                   image={resource.image}
                 />
+              ) : !user ? (
+                <Link
+                  href={loginHref}
+                  className="flex items-center justify-center gap-2 w-full py-3.5 rounded-full bg-primary text-white text-[16px] font-semibold hover:bg-primary-dark transition-colors active:scale-[0.99]"
+                >
+                  <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                    <path
+                      fillRule="evenodd"
+                      d="M5 9V7a5 5 0 1110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  {resource.linkUrl ? '로그인하고 무료로 이용하기' : '로그인하고 무료로 받기'}
+                </Link>
               ) : resource.linkUrl ? (
                 <a
                   href={resource.linkUrl}
@@ -131,7 +150,9 @@ export default async function ResourceDetailPage({
               <p className="text-[12px] text-ink-light text-center mt-3 leading-relaxed">
                 {isPaid
                   ? '이용기간: 결제일로부터 6개월 · 토스페이먼츠 안전결제'
-                  : '로그인 없이 바로 이용할 수 있어요.'}
+                  : user
+                    ? '소소숲 회원에게 무료로 제공되는 자료입니다.'
+                    : '로그인하면 무료로 받을 수 있어요. 구글·카카오 계정으로 바로 로그인할 수 있습니다.'}
               </p>
             </div>
           </div>

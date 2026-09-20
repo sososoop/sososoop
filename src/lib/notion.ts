@@ -1,3 +1,4 @@
+import { unstable_cache } from 'next/cache';
 import { Client } from '@notionhq/client';
 import type { PageObjectResponse } from '@notionhq/client/build/src/api-endpoints/common';
 import type { Resource } from '@/data/resources';
@@ -90,6 +91,12 @@ export async function getResources(): Promise<Resource[] | null> {
     return null;
   }
 }
+
+// 자료실 페이지는 로그인 여부를 봐야 해서 동적 렌더링이다.
+// 매 요청마다 Notion을 치지 않도록 60초 캐시를 씌운다(기존 revalidate=60과 같은 주기).
+export const getResourcesCached = unstable_cache(getResources, ['resources'], {
+  revalidate: 60,
+});
 
 export async function getLectures(): Promise<Lecture[] | null> {
   const dsId = process.env.NOTION_LECTURES_DS_ID;

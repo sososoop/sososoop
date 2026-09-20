@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { freeResources, paidResources } from '@/data/resources';
-import { getResources } from '@/lib/notion';
+import { getResourcesCached } from '@/lib/notion';
+import { createClient } from '@/lib/supabase/server';
 import ResourceTabs from '@/components/ResourceTabs';
 
 export const metadata: Metadata = {
@@ -9,10 +10,16 @@ export const metadata: Metadata = {
     '임상 현장에서 바로 쓸 수 있는 무료·유료 자료를 제공합니다. AI 프롬프트 모음, 학습 자료 제작 GPT 등.',
 };
 
-export const revalidate = 60;
+// 무료 자료도 로그인한 회원에게만 열어주므로 요청마다 세션을 확인한다.
+// (Notion 조회는 getResourcesCached가 60초 캐시)
+export const dynamic = 'force-dynamic';
 
 export default async function ResourcesPage() {
-  const notionResources = await getResources();
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const notionResources = await getResourcesCached();
 
   const free = notionResources
     ? notionResources.filter((r) => r.type === 'free')
@@ -40,7 +47,7 @@ export default async function ResourcesPage() {
 
       <section className="bg-canvas py-12 px-6">
         <div className="max-w-[1000px] mx-auto">
-          <ResourceTabs freeResources={free} paidResources={paid} />
+          <ResourceTabs freeResources={free} paidResources={paid} loggedIn={!!user} />
         </div>
       </section>
     </>
