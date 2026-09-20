@@ -18,7 +18,7 @@ const SHOTS: PreviewShot[] = [
     src: '/images/preview/cbt-start.webp',
     label: '응시 정보 입력',
     caption:
-      '실제 CBT처럼 급수와 교시를 고르고 입장합니다. 1·2교시 이어풀기까지 실제 시험과 같은 구성이에요.',
+      '실제 CBT처럼 급수·회차·교시를 고르고 입장합니다. 1급은 1·2회차, 2급은 1회차까지 준비돼 있고, 1·2교시 이어풀기도 실제 시험과 같은 구성이에요.',
   },
   {
     src: '/images/preview/cbt-exam.webp',
