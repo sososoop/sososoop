@@ -45,7 +45,13 @@ export async function GET(request: Request) {
     }
   }
 
-  return new NextResponse(appHtml as string, {
+  // 앱의 "내 학습 기록"(오답노트·응시 기록)은 기기 localStorage에 계정별로 저장한다 — 저장 키에 쓸 회원 id를 넣어 준다.
+  const html = (appHtml as string).replace(
+    '</head>',
+    `<script>window.STUDY_USER = ${JSON.stringify(user.id)};</script>\n</head>`,
+  );
+
+  return new NextResponse(html, {
     headers: {
       'content-type': 'text/html; charset=utf-8',
       'cache-control': 'private, no-store',
