@@ -49,6 +49,12 @@ html = html.replace(
 );
 if (html === before) throw new Error('questions.js <script> 태그를 찾지 못함 — index.html 구조 확인 필요');
 
+// 2-b) 정식판 전용 대문(시험일정·주의사항) 켜기 — 베타·체험판은 이 플래그가 없어 바로 응시 정보 입력으로 간다
+const beforeHome = html;
+html = html.replace('</head>', '<script>window.SHOW_HOME = true;</script>\n</head>');
+if (html === beforeHome) throw new Error('</head>를 찾지 못함 — 대문 플래그를 넣을 수 없음');
+if (!html.includes('id="homeScreen"')) throw new Error('index.html에 대문(homeScreen)이 없음 — 소스 확인 필요');
+
 // 3) 잔여 firebase-config.js 참조가 없는지 안전 점검
 if (/firebase-config\.js|firebasejs\//.test(html)) {
   throw new Error('Firebase 참조가 남아있음 — 제거 로직 확인 필요');
