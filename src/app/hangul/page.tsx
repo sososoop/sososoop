@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { createClient } from '@/lib/supabase/server';
 import { isAdmin } from '@/lib/admin';
 import { hasHangulEntitlement } from '@/lib/entitlements';
+import { getCartItem } from '@/lib/products';
 import LockedPreview, { type PreviewFeature, type PreviewShot } from '@/components/LockedPreview';
 
 export const dynamic = 'force-dynamic';
@@ -100,6 +101,7 @@ export default async function HangulPage() {
         features={FEATURES}
         notes={NOTES}
         checkoutHref="/checkout?product=hangul"
+        cartItem={await getCartItem('hangul')}
         loginHref="/login?next=/hangul"
       />
     );

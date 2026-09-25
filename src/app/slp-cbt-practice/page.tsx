@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { createClient } from '@/lib/supabase/server';
 import { isAdmin } from '@/lib/admin';
 import { hasCbtEntitlement } from '@/lib/entitlements';
+import { getCartItem } from '@/lib/products';
 import LockedPreview, { type PreviewFeature, type PreviewShot } from '@/components/LockedPreview';
 import DeviceGate from './DeviceGate';
 
@@ -109,6 +110,7 @@ export default async function CbtPracticePage() {
         features={FEATURES}
         notes={NOTES}
         checkoutHref="/checkout?product=cbt"
+        cartItem={await getCartItem('cbt')}
         loginHref="/login?next=/slp-cbt-practice"
       />
     );

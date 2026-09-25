@@ -6,6 +6,8 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
+import AddToCartButton from '@/components/AddToCartButton';
+import type { CartItem } from '@/lib/cart';
 
 export type PreviewShot = {
   src: string;
@@ -27,6 +29,8 @@ type Props = {
   features: PreviewFeature[];
   notes: string[];
   checkoutHref: string;
+  /** [장바구니 담기]에 담을 상품. 없으면 버튼을 숨긴다. */
+  cartItem?: CartItem | null;
   loginHref: string;
   /** anonymous = 비로그인, unpaid = 로그인했지만 이용권 없음 */
   state: 'anonymous' | 'unpaid';
@@ -41,6 +45,7 @@ export default function LockedPreview({
   features,
   notes,
   checkoutHref,
+  cartItem,
   loginHref,
   state,
 }: Props) {
@@ -68,6 +73,12 @@ export default function LockedPreview({
             >
               이용권 구매하기
             </Link>
+            {cartItem && (
+              <AddToCartButton
+                item={cartItem}
+                className="inline-flex items-center px-6 py-3 rounded-full border border-primary-on-dark/60 text-primary-on-dark text-[15px] font-semibold hover:bg-on-dark/10 transition-colors active:scale-95"
+              />
+            )}
             {state === 'anonymous' && (
               <Link
                 href={loginHref}
@@ -180,6 +191,12 @@ export default function LockedPreview({
             >
               이용권 구매하기
             </Link>
+            {cartItem && (
+              <AddToCartButton
+                item={cartItem}
+                className="block w-full mt-2.5 px-6 py-3 rounded-full border border-primary bg-white text-primary text-[15px] font-semibold hover:bg-primary/5 transition-colors active:scale-95"
+              />
+            )}
             <p className="mt-3 text-[12px] text-ink-light">이용기간: 결제일로부터 6개월</p>
             <Link
               href="/resources"

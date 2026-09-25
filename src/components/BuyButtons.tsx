@@ -46,7 +46,7 @@ export default function BuyButtons({ id, title, price, image }: Props) {
         onClick={handleCart}
         className="w-full py-3.5 rounded-full border border-primary bg-white text-primary text-[16px] font-semibold hover:bg-primary/5 transition-colors active:scale-[0.99]"
       >
-        {inCart ? '장바구니 보기' : '장바구니'}
+        {inCart ? '장바구니 보기' : '장바구니 담기'}
       </button>
       {inCart && (
         <p className="text-[12px] text-primary text-center">장바구니에 담았어요.</p>

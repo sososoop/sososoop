@@ -68,6 +68,17 @@ export async function getPurchasable(
   return pickResource(paid, id) ?? pickLecture(lects, id);
 }
 
+// 이용권 소개 화면의 [장바구니 담기]용. 별칭(cbt·hangul)을 실제 상품 id로 풀어
+// 자료실 상세페이지에서 담은 것과 같은 상품으로 담기게 한다.
+export async function getCartItem(
+  rawId: string,
+): Promise<{ id: string; title: string; price: number; image?: string } | null> {
+  const paid = (await loadResources()).filter((r) => r.type === 'paid');
+  const res = paid.find((r) => r.id === resolveAlias(rawId, paid));
+  if (!res || typeof res.price !== 'number' || res.price <= 0) return null;
+  return { id: res.id, title: res.title, price: res.price, image: res.image };
+}
+
 export type Order = {
   items: Purchasable[];
   total: number;
