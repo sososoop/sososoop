@@ -16,10 +16,10 @@ export const metadata: Metadata = {
 
 const SHOTS: PreviewShot[] = [
   {
-    src: '/images/preview/cbt-start.webp',
-    label: '응시 정보 입력',
+    src: '/images/preview/cbt-home.webp',
+    label: '첫 화면',
     caption:
-      '실제 CBT처럼 급수·회차·교시를 고르고 입장합니다. 1급은 1·2회차, 2급은 1회차까지 준비돼 있고, 1·2교시 이어풀기도 실제 시험과 같은 구성이에요.',
+      '들어가면 올해 시험일정과 시험까지 남은 날짜, 교시별 시간표, 합격 기준, 시험 당일 주의사항을 먼저 보여 드려요. 내 학습 기록(오답노트·응시 기록)도 여기서 바로 열어요.',
   },
   {
     src: '/images/preview/cbt-exam.webp',
