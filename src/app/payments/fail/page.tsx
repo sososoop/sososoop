@@ -27,10 +27,10 @@ export default async function PaymentFailPage({
         {code && <p className="text-[12px] text-ink-light mb-6">오류 코드: {code}</p>}
         <div className="mt-4">
           <Link
-            href="/resources"
+            href="/"
             className="inline-block px-6 py-3 rounded-full bg-primary text-white text-[14px] font-medium"
           >
-            자료실로 돌아가기
+            홈으로 돌아가기
           </Link>
         </div>
       </div>

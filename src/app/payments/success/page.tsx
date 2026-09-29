@@ -105,10 +105,10 @@ export default async function PaymentSuccessPage({
           <h1 className="text-[19px] font-bold text-ink mb-2">결제를 완료하지 못했어요</h1>
           <p className="text-[14px] text-ink-muted leading-relaxed mb-6">{result.message}</p>
           <Link
-            href="/resources"
+            href="/"
             className="inline-block px-6 py-3 rounded-full bg-primary text-white text-[14px] font-medium"
           >
-            자료실로 돌아가기
+            홈으로 돌아가기
           </Link>
         </div>
       </main>
@@ -158,10 +158,10 @@ export default async function PaymentSuccessPage({
             취소됩니다.
           </p>
           <Link
-            href="/resources"
+            href="/"
             className="inline-block px-6 py-3 rounded-full bg-primary text-white text-[14px] font-medium"
           >
-            자료실로 돌아가기
+            홈으로 돌아가기
           </Link>
         </div>
       </main>
@@ -199,16 +199,16 @@ export default async function PaymentSuccessPage({
             >
               CBT 연습앱 시작하기 →
             </Link>
-            <Link href="/resources" className="text-[13px] text-ink-muted underline">
-              자료실로 돌아가기
+            <Link href="/" className="text-[13px] text-ink-muted underline">
+              홈으로 돌아가기
             </Link>
           </div>
         ) : (
           <Link
-            href="/resources"
+            href="/"
             className="inline-block px-6 py-3 rounded-full bg-primary text-white text-[14px] font-medium"
           >
-            자료실로 돌아가기
+            홈으로 돌아가기
           </Link>
         )}
       </div>
