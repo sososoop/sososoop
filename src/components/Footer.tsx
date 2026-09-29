@@ -46,6 +46,7 @@ export default function Footer() {
             </p>
             <div className="text-[10px] text-ink-light mt-2 leading-relaxed space-y-0.5">
               <p>상호명: 소소숲 · 대표자: 이승윤 · 사업자등록번호: 203-33-40593</p>
+              <p>통신판매업신고번호: 제2026-서울강남-05359호</p>
               <p>사업장 주소: 서울특별시 강남구 개포로 264, 126-2503</p>
               <p>
                 전화: <a href="tel:010-5668-8046" className="hover:text-ink transition-colors">010-5668-8046</a>
