@@ -28,7 +28,28 @@ vm.runInNewContext(questionsSrc, sandbox);
 const W = sandbox.window;
 const hidden = W.HIDDEN_SETS || [];
 const isHidden = (q) => hidden.some((h) => h.grade === (q.grade || 1) && h.set === (q.set || 1));
-const visible = (W.QUESTIONS || []).filter((q) => !isHidden(q));
+
+// 공개할 급수·회차와 문항 수를 여기에 직접 적는다(2026-09-30).
+// HIDDEN_SETS 한 줄만 믿으면, 그 줄이 실수로 비었을 때 숨김 회차가 통째로 번들에 실린다.
+// 이 목록에 없는 회차는 절대 싣지 않고, 문항 수가 다르거나 목록과 HIDDEN_SETS가 겹치면 빌드를 멈춘다.
+// 회차를 새로 공개할 때: 여기에 한 줄 더하고, questions.js의 HIDDEN_SETS에서도 빼기.
+const PUBLIC_SETS = [
+  { grade: 1, set: 1, n: 140 },
+  { grade: 1, set: 2, n: 140 },
+  { grade: 2, set: 1, n: 150 },
+];
+const keyOf = (q) => `${q.grade || 1}-${q.set || 1}`;
+const publicKeys = new Set(PUBLIC_SETS.map((p) => `${p.grade}-${p.set}`));
+for (const p of PUBLIC_SETS) {
+  if (isHidden({ grade: p.grade, set: p.set })) {
+    throw new Error(`${p.grade}급 ${p.set}회차가 공개 목록과 HIDDEN_SETS에 둘 다 있음 — 어느 쪽이 맞는지 확인 필요`);
+  }
+}
+const visible = (W.QUESTIONS || []).filter((q) => publicKeys.has(keyOf(q)) && !isHidden(q));
+for (const p of PUBLIC_SETS) {
+  const got = visible.filter((q) => keyOf(q) === `${p.grade}-${p.set}`).length;
+  if (got !== p.n) throw new Error(`${p.grade}급 ${p.set}회차 문항 수 ${got}개 — 공개 목록엔 ${p.n}개로 적혀 있음`);
+}
 const stripped = (W.QUESTIONS || []).length - visible.length;
 const questions =
   `window.EXAM_TITLE = ${JSON.stringify(W.EXAM_TITLE || '언어재활사 모의 CBT')};\n` +
@@ -60,6 +81,21 @@ if (/firebase-config\.js|firebasejs\//.test(html)) {
   throw new Error('Firebase 참조가 남아있음 — 제거 로직 확인 필요');
 }
 
+// 4) 완성된 번들을 다시 읽어 실린 문항이 공개 목록과 정확히 같은지 확인(다른 경로로 섞여 들어간 문항까지 잡는다)
+{
+  const m = /<script>\n(window\.EXAM_TITLE[\s\S]*?)\n<\/script>/.exec(html);
+  if (!m) throw new Error('번들에서 문항 스크립트를 찾지 못함');
+  const box = { window: {} };
+  vm.runInNewContext(m[1], box);
+  const shipped = box.window.QUESTIONS || [];
+  const outside = shipped.filter((q) => !publicKeys.has(keyOf(q)));
+  if (outside.length) throw new Error(`공개 목록 밖 문항 ${outside.length}개가 번들에 있음`);
+  const total = PUBLIC_SETS.reduce((a, p) => a + p.n, 0);
+  if (shipped.length !== total) throw new Error(`번들 문항 ${shipped.length}개 — 공개 목록 합계 ${total}개와 다름`);
+  if ((html.match(/window\.QUESTIONS\s*=/g) || []).length !== 1) throw new Error('번들에 문항 목록이 두 번 이상 있음');
+}
+
 writeFileSync(OUT, JSON.stringify(html), 'utf8');
 console.log(`OK  ${OUT}  (${(html.length / 1024).toFixed(0)} KB HTML)`);
 console.log(`문항: 공개 ${visible.length}개 / 비공개 제외 ${stripped}개 (HIDDEN_SETS=${JSON.stringify(hidden)})`);
+console.log(`공개 회차 확인: ${PUBLIC_SETS.map((p) => `${p.grade}급 ${p.set}회차 ${p.n}`).join(' · ')} — 번들 재검사 통과`);
