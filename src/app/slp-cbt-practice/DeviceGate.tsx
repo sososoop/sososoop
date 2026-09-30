@@ -2,20 +2,32 @@
 
 import { useEffect, useState } from 'react';
 
-// 1계정 = 1기기. 이 브라우저의 기기 식별자(localStorage)를 서버에 보내 바인딩/검증한 뒤
+// 1계정 = 1기기. 서버(/slp-cbt-practice/bind)가 기기 번호를 쿠키로 확인하고, 들어올 때마다 새 번호로 바꾼다.
 // 통과하면 CBT 앱(iframe)을 띄운다. 다른 기기면 안내를 보여준다.
-const DEVICE_KEY = 'slp_cbt_device_id';
+// 예전(2026-09-30 전)엔 브라우저가 만든 기기 ID를 localStorage에 두었다 → 남아 있으면 한 번 보내서 새 방식으로 옮기고 지운다.
+const LEGACY_KEY = 'slp_cbt_device_id';
 
-function getDeviceId(): string {
-  let d = localStorage.getItem(DEVICE_KEY);
-  if (!d) {
-    d =
-      typeof crypto !== 'undefined' && crypto.randomUUID
-        ? crypto.randomUUID()
-        : `dev-${Date.now()}-${Math.floor(Math.random() * 1e9)}`;
-    localStorage.setItem(DEVICE_KEY, d);
+function legacyDeviceId(): string {
+  try {
+    return localStorage.getItem(LEGACY_KEY) ?? '';
+  } catch {
+    return '';
   }
-  return d;
+}
+
+// 번호를 바꾸는 요청이 동시에 두 번 가면 뒤의 것이 '다른 기기'로 막힌다 → 한 화면에서는 한 번만 보낸다
+let binding: Promise<number> | null = null;
+function bindOnce(): Promise<number> {
+  binding ??= fetch('/slp-cbt-practice/bind', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ deviceId: legacyDeviceId() }),
+  })
+    .then((res) => res.status)
+    .finally(() => {
+      binding = null;
+    });
+  return binding;
 }
 
 type State = 'checking' | 'ok' | 'conflict' | 'error';
@@ -27,16 +39,16 @@ export default function DeviceGate() {
     let alive = true;
     (async () => {
       try {
-        const deviceId = getDeviceId();
-        const res = await fetch('/slp-cbt-practice/bind', {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ deviceId }),
-        });
+        const status = await bindOnce();
         if (!alive) return;
-        if (res.ok) {
+        if (status >= 200 && status < 300) {
+          try {
+            localStorage.removeItem(LEGACY_KEY);
+          } catch {
+            // no-op
+          }
           setState('ok');
-        } else if (res.status === 409) {
+        } else if (status === 409) {
           setState('conflict');
         } else {
           setState('error');
@@ -76,7 +88,9 @@ export default function DeviceGate() {
         <div className={box}>
           <h1 className="text-[19px] font-bold text-ink mb-2">다른 기기에 등록된 계정이에요</h1>
           <p className="text-[14px] text-ink-muted leading-relaxed">
-            이 이용권은 한 대의 기기에서만 사용할 수 있어요.
+            이 이용권은 한 대의 기기(브라우저)에서만 사용할 수 있어요.
+            <br />
+            다른 기기나 다른 브라우저에서 들어갔거나, 이 브라우저의 쿠키를 지웠을 때도 이 화면이 나와요.
             <br />
             기기 변경이 필요하면 소소숲 카카오채널로 문의해 주세요.
           </p>
