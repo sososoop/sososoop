@@ -60,20 +60,6 @@ export const games: Game[] = [
     image: '/images/games/direction-quiz.webp',
   },
   {
-    id: 'reward-timer',
-    title: '약속 별판 · 모래시계 타이머',
-    description:
-      '잘했을 때 별을 하나씩 채우는 강화판과, 기다리는 시간이 줄어드는 것을 눈으로 보여 주는 모래시계 타이머예요. 별 개수와 1·3·5분 또는 직접 정한 시간으로 쓸 수 있어요.',
-    goal: '약속 지키기와 기다리기를 눈으로 보며 연습하기',
-    audiences: ['유아', '초저', '선생님용'],
-    areas: ['생활·행동'],
-    level: '★',
-    format: '게임',
-    time: '1~5분',
-    linkUrl: 'https://reward-timer.sososoop.chatgpt.site/',
-    image: '/images/games/reward-timer.webp',
-  },
-  {
     id: 'handwriting',
     title: '글씨 연습장 생성기',
     description:
@@ -98,6 +84,19 @@ export const games: Game[] = [
     time: '10분',
     linkUrl: 'https://sososoop.github.io/job-character-kit/',
     image: '/images/games/job-character-kit.webp',
+  },
+  {
+    id: 'reward-timer',
+    title: '약속 별판 · 모래시계 타이머',
+    description:
+      '잘했을 때 별을 하나씩 채우는 강화판과, 기다리는 시간이 줄어드는 것을 눈으로 보여 주는 모래시계 타이머예요. 별 개수와 1·3·5분 또는 직접 정한 시간으로 쓸 수 있어요.',
+    goal: '약속 지키기와 기다리기를 눈으로 보며 연습하기',
+    audiences: ['선생님용'],
+    areas: ['생활·행동'],
+    format: '만들기 도구',
+    time: '1~5분',
+    linkUrl: 'https://reward-timer.sososoop.chatgpt.site/',
+    image: '/images/games/reward-timer.webp',
   },
   {
     id: 'reading-ssokssok-gpt',
