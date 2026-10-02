@@ -115,6 +115,19 @@ function GameCard({ game, loggedIn }: { game: Game; loggedIn: boolean }) {
             </svg>
             {game.format === 'PDF' ? '로그인하고 무료로 받기' : '로그인하고 무료로 하기'}
           </Link>
+        ) : game.linkUrl && game.fileUrl ? (
+          // 학습지와 게임이 한 세트: 학습지를 먼저 하고 게임으로 복습한다.
+          <div className="flex flex-col gap-2">
+            <p className="text-[13px] text-ink-light">학습지를 먼저 하고, 게임으로 복습해요.</p>
+            <div className="flex flex-wrap gap-2">
+              <a href={game.fileUrl} download={game.downloadName ?? ''} className={btnClass}>
+                ① 학습지 받기
+              </a>
+              <a href={game.linkUrl} target="_blank" rel="noopener noreferrer" className={btnClass}>
+                ② 게임 하기
+              </a>
+            </div>
+          </div>
         ) : game.linkUrl ? (
           <a href={game.linkUrl} target="_blank" rel="noopener noreferrer" className={btnClass}>
             {actionLabel(game.format)}
