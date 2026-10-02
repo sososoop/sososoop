@@ -7,11 +7,10 @@ import { type Game } from '@/data/games';
 // 필터 칩 순서. Notion에 새 키워드를 넣으면 목록 끝에 붙는다.
 const AUDIENCE_ORDER = ['유아', '초저', '초고', '중등', '선생님용', '국시 수험생'];
 const AREA_ORDER = ['어휘', '한자어', '문장', '읽기·해독', '읽기', '쓰기', '공간·방향', '그림·놀이', 'AI 활용', '국시'];
-const FORMAT_ORDER = ['게임', '퀴즈', '만들기 도구', 'GPT', 'PDF'];
+const FORMAT_ORDER = ['게임', '만들기 도구', 'GPT', 'PDF'];
 
 const formatColors: Record<string, string> = {
   게임: 'bg-blue-50 text-blue-700',
-  퀴즈: 'bg-green-50 text-green-700',
   '만들기 도구': 'bg-purple-50 text-purple-700',
   GPT: 'bg-orange-50 text-orange-700',
   PDF: 'bg-stone-100 text-stone-700',

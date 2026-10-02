@@ -54,7 +54,7 @@ export const games: Game[] = [
     audiences: ['유아', '초저'],
     areas: ['공간·방향', '어휘'],
     level: '★',
-    format: '퀴즈',
+    format: '게임',
     time: '5분',
     linkUrl: 'https://sososoop.github.io/direction-vocab-quiz/',
     image: '/images/games/direction-quiz.webp',

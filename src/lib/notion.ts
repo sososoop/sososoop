@@ -172,7 +172,8 @@ export async function getGames(): Promise<Game[] | null> {
           audiences: multiSelect(props, '대상'),
           areas: multiSelect(props, '영역'),
           level: select(props, '난이도') ?? undefined,
-          format: select(props, '형태') ?? '',
+          // 퀴즈도 게임으로 묶는다(사용자 결정 2026-10-03).
+          format: (select(props, '형태') ?? '').replace(/^퀴즈$/, '게임'),
           time: text(props, '시간'),
           linkUrl: url(props, '링크URL'),
           fileUrl: text(props, '파일URL') || undefined,
