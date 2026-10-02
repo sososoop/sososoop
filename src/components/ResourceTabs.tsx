@@ -154,18 +154,19 @@ type Props = {
   freeResources: Resource[];
   paidResources: Resource[];
   loggedIn: boolean;
+  initialTab?: Tab;
 };
 
-export default function ResourceTabs({ freeResources, paidResources, loggedIn }: Props) {
-  const [activeTab, setActiveTab] = useState<Tab>('free');
+export default function ResourceTabs({ freeResources, paidResources, loggedIn, initialTab = 'free' }: Props) {
+  const [activeTab, setActiveTab] = useState<Tab>(initialTab);
 
   return (
     <>
       {/* 탭 버튼 */}
-      <div className="flex gap-3 mb-10">
+      <div className="flex flex-wrap gap-2 md:gap-3 mb-10">
         <button
           onClick={() => setActiveTab('free')}
-          className={`px-6 py-3 rounded-full text-[15px] font-semibold transition-colors ${
+          className={`px-4 md:px-6 py-2.5 md:py-3 rounded-full text-[14px] md:text-[15px] font-semibold transition-colors ${
             activeTab === 'free'
               ? 'bg-primary text-white'
               : 'bg-canvas border border-hairline text-ink-muted hover:border-primary/40 hover:text-ink'
@@ -175,7 +176,7 @@ export default function ResourceTabs({ freeResources, paidResources, loggedIn }:
         </button>
         <button
           onClick={() => setActiveTab('paid')}
-          className={`px-6 py-3 rounded-full text-[15px] font-semibold transition-colors ${
+          className={`px-4 md:px-6 py-2.5 md:py-3 rounded-full text-[14px] md:text-[15px] font-semibold transition-colors ${
             activeTab === 'paid'
               ? 'bg-primary text-white'
               : 'bg-canvas border border-hairline text-ink-muted hover:border-primary/40 hover:text-ink'
@@ -183,6 +184,12 @@ export default function ResourceTabs({ freeResources, paidResources, loggedIn }:
         >
           유료 자료
         </button>
+        <Link
+          href="/resources/games"
+          className="px-4 md:px-6 py-2.5 md:py-3 rounded-full text-[14px] md:text-[15px] font-semibold transition-colors bg-canvas border border-hairline text-ink-muted hover:border-primary/40 hover:text-ink"
+        >
+          무료 학습게임
+        </Link>
       </div>
 
       {/* 무료 자료 */}

@@ -4,6 +4,8 @@ import type { PageObjectResponse } from '@notionhq/client/build/src/api-endpoint
 import type { Resource } from '@/data/resources';
 import { freeResources, paidResources } from '@/data/resources';
 import type { Lecture } from '@/data/lectures';
+import type { Game } from '@/data/games';
+import { games as staticGames } from '@/data/games';
 import { lectures as staticLectures } from '@/data/lectures';
 
 const notion = new Client({ auth: process.env.NOTION_TOKEN });
@@ -46,6 +48,16 @@ function num(props: Record<string, unknown>, key: string): number | undefined {
 function select(props: Record<string, unknown>, key: string): string | null {
   const p = props[key] as { type?: string; select?: { name: string } | null } | undefined;
   return p?.type === 'select' ? (p.select?.name ?? null) : null;
+}
+
+function multiSelect(props: Record<string, unknown>, key: string): string[] {
+  const p = props[key] as { type?: string; multi_select?: { name: string }[] } | undefined;
+  return p?.type === 'multi_select' ? (p.multi_select ?? []).map((o) => o.name) : [];
+}
+
+function checkbox(props: Record<string, unknown>, key: string): boolean {
+  const p = props[key] as { type?: string; checkbox?: boolean } | undefined;
+  return p?.type === 'checkbox' ? !!p.checkbox : false;
 }
 
 export async function getResources(): Promise<Resource[] | null> {
@@ -133,3 +145,43 @@ export async function getLectures(): Promise<Lecture[] | null> {
     return null;
   }
 }
+
+// 무료 학습게임(/resources/games). '공개'를 체크한 행만 보여 준다.
+export async function getGames(): Promise<Game[] | null> {
+  const dsId = process.env.NOTION_GAMES_DS_ID;
+  if (!dsId || !process.env.NOTION_TOKEN) return null;
+
+  try {
+    const response = await notion.dataSources.query({
+      data_source_id: dsId,
+      sorts: [{ property: '정렬순서', direction: 'ascending' }],
+    });
+
+    return response.results
+      .filter((item): item is PageObjectResponse => item.object === 'page' && 'properties' in item)
+      .filter((page) => checkbox(page.properties as Record<string, unknown>, '공개'))
+      .map((page) => {
+        const props = page.properties as Record<string, unknown>;
+        const title = text(props, '제목');
+        return {
+          id: page.id,
+          title,
+          description: text(props, '설명'),
+          goal: text(props, '학습목표'),
+          audiences: multiSelect(props, '대상'),
+          areas: multiSelect(props, '영역'),
+          level: select(props, '난이도') ?? undefined,
+          format: select(props, '형태') ?? '',
+          time: text(props, '시간'),
+          linkUrl: url(props, '링크URL'),
+          image: url(props, '이미지URL') ?? findStaticImage(title, staticGames),
+        };
+      });
+  } catch {
+    return null;
+  }
+}
+
+export const getGamesCached = unstable_cache(getGames, ['games'], {
+  revalidate: 60,
+});

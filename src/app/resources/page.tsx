@@ -14,7 +14,12 @@ export const metadata: Metadata = {
 // (Notion 조회는 getResourcesCached가 60초 캐시)
 export const dynamic = 'force-dynamic';
 
-export default async function ResourcesPage() {
+export default async function ResourcesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>;
+}) {
+  const { tab } = await searchParams;
   const supabase = await createClient();
   const {
     data: { user },
@@ -47,7 +52,7 @@ export default async function ResourcesPage() {
 
       <section className="bg-canvas py-12 px-6">
         <div className="max-w-[1000px] mx-auto">
-          <ResourceTabs freeResources={free} paidResources={paid} loggedIn={!!user} />
+          <ResourceTabs freeResources={free} paidResources={paid} loggedIn={!!user} initialTab={tab === 'paid' ? 'paid' : 'free'} />
         </div>
       </section>
     </>
