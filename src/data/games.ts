@@ -1,5 +1,5 @@
-// 무료 학습게임(/resources/games) 데이터.
-// 실제 소스는 Notion 「소소숲 무료 학습게임」 표이고, 여기 목록은 Notion을 못 읽을 때만 쓰는 폴백이다.
+// 자료실 '무료 자료' 탭 데이터(게임·도구·GPT·PDF).
+// 실제 소스는 Notion 「소소숲 무료 자료」 표이고, 여기 목록은 Notion을 못 읽을 때만 쓰는 폴백이다.
 export type Game = {
   id: string;
   title: string;
@@ -11,10 +11,26 @@ export type Game = {
   format: string;
   time: string;
   linkUrl?: string;
+  fileUrl?: string;
+  downloadName?: string;
   image?: string;
 };
 
 export const games: Game[] = [
+  {
+    id: 'mushroom-explorer',
+    title: '버섯 탐험대',
+    description:
+      "숲길 정거장 다섯 곳을 돌며 독버섯을 '~처럼'으로 말해 보는 게임이에요. '처럼' 찾기, 세 칸 문장 맞추기, 이름 속 숨은 낱말, 닮은 것 고르기, 안전 약속 O X를 마치면 대원증을 받아요.",
+    goal: "'~처럼'으로 닮은 점을 말하는 비유 표현 익히기",
+    audiences: ['초저'],
+    areas: ['문장', '어휘'],
+    level: '★★',
+    format: '게임',
+    time: '20분',
+    linkUrl: 'https://sososoop.github.io/mushroom-explorer/',
+    image: '/images/games/mushroom-explorer.webp',
+  },
   {
     id: 'hanja-weather',
     title: '한자 날씨 탐정대',
@@ -46,7 +62,8 @@ export const games: Game[] = [
   {
     id: 'handwriting',
     title: '글씨 연습장 생성기',
-    description: '원하는 낱말과 문장을 넣으면 따라 쓰기 연습장을 바로 만들어 인쇄할 수 있어요.',
+    description:
+      '원하는 단어·문장·문단을 넣으면 받아쓰기·따라쓰기 연습지를 바로 만들어 인쇄하거나 PDF로 저장할 수 있어요. 설치도 비용도 없이 바로 써요.',
     goal: '아이 수준에 맞는 따라 쓰기 연습장 만들기',
     audiences: ['선생님용'],
     areas: ['쓰기'],
@@ -67,5 +84,71 @@ export const games: Game[] = [
     time: '10분',
     linkUrl: 'https://sososoop.github.io/job-character-kit/',
     image: '/images/games/job-character-kit.webp',
+  },
+  {
+    id: 'reading-ssokssok-gpt',
+    title: '소소숲 vol.2 읽기학습지 생성봇 읽기쏙쏙',
+    description:
+      '학년과 주제 키워드만 입력하면 수준에 맞는 읽기 지문과 문제, 어휘 정리, 어울리는 그림 프롬프트까지 만들어 주는 학습 자료 제작 GPT예요.',
+    goal: '학년·주제에 맞는 읽기 학습지 빠르게 만들기',
+    audiences: ['선생님용'],
+    areas: ['읽기'],
+    format: 'GPT',
+    time: '',
+    linkUrl:
+      'https://chatgpt.com/g/g-69573a7815a48191adc238d9d52711d0-sososup-vol2-irudassaemyi-ilggihagseubji-saengseongbos-ilggissogssog',
+    image: '/images/resource-reading-gpt.png',
+  },
+  {
+    id: 'coloring-gpt',
+    title: '소소숲 vol.2 색칠공부 공방',
+    description:
+      '키워드나 이미지를 넣으면 굵은 선과 단순한 형태의 색칠 도안을 만들어 주는 GPT예요. 수업 자료, 워크북, 홈스쿨링에 바로 쓸 수 있어요.',
+    goal: '유아·아동용 색칠 도안 만들기',
+    audiences: ['선생님용'],
+    areas: ['그림·놀이'],
+    format: 'GPT',
+    time: '',
+    linkUrl: 'https://chatgpt.com/g/g-69573d8a5ecc819195704bc43e9b7b1b-sososup-vol-2-saegcilgongbu-gongbang',
+    image: '/images/resource-coloring-book-gpt.png',
+  },
+  {
+    id: 'pencil-character-gpt',
+    title: '소소숲 vol.2 귀여운 색연필 그림봇 콩이',
+    description: '간단한 키워드를 넣으면 감성적인 색연필 스타일 일러스트로 그려 주는 GPT예요.',
+    goal: '수업 자료에 쓸 색연필 그림 만들기',
+    audiences: ['선생님용'],
+    areas: ['그림·놀이'],
+    format: 'GPT',
+    time: '',
+    linkUrl:
+      'https://chatgpt.com/g/g-69573f1d39508191b4a42c2c4a9d8da6-sososup-vol-2-gwiyeoun-saegyeonpil-geurimbos-kongi',
+    image: '/images/resource-cute-pencil-character-gpt.png',
+  },
+  {
+    id: 'ai-prompt-guide',
+    title: '언어재활사를 위한 AI 프롬프트 모음집',
+    description: '보고서, 치료계획, 부모상담에 바로 쓸 수 있는 프롬프트 50개를 모은 PDF예요.',
+    goal: '보고서·치료계획·부모상담 프롬프트 바로 쓰기',
+    audiences: ['선생님용'],
+    areas: ['AI 활용'],
+    format: 'PDF',
+    time: '',
+    fileUrl: '/files/언어치료·특수교육 AI 활용 프롬프트 50_무료공유_이루다쌤.pdf',
+    downloadName: '언어치료·특수교육 AI 활용 프롬프트 50_소소숲.pdf',
+    image: '/images/resource-ai-prompt-guide.png',
+  },
+  {
+    id: 'fluency-exam-analysis',
+    title: '유창성장애 기출 문항 경향 분석집',
+    description: '1급·2급 언어재활사 국가시험 준비를 위한 유창성장애 기출 경향 분석 자료집이에요.',
+    goal: '유창성장애 출제 경향 한눈에 정리하기',
+    audiences: ['국시 수험생'],
+    areas: ['국시'],
+    format: 'PDF',
+    time: '',
+    fileUrl: '/files/유창성장애_출제경향_이루다쌤.pdf',
+    downloadName: '유창성장애_출제경향_소소숲.pdf',
+    image: '/images/resource-fluency-exam-analysis.png',
   },
 ];

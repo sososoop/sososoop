@@ -5,15 +5,23 @@ import Link from 'next/link';
 import { type Game } from '@/data/games';
 
 // 필터 칩 순서. Notion에 새 키워드를 넣으면 목록 끝에 붙는다.
-const AUDIENCE_ORDER = ['유아', '초저', '초고', '중등', '선생님용'];
-const AREA_ORDER = ['어휘', '한자어', '문장', '읽기·해독', '쓰기', '공간·방향'];
-const FORMAT_ORDER = ['게임', '퀴즈', '만들기 도구'];
+const AUDIENCE_ORDER = ['유아', '초저', '초고', '중등', '선생님용', '국시 수험생'];
+const AREA_ORDER = ['어휘', '한자어', '문장', '읽기·해독', '읽기', '쓰기', '공간·방향', '그림·놀이', 'AI 활용', '국시'];
+const FORMAT_ORDER = ['게임', '퀴즈', '만들기 도구', 'GPT', 'PDF'];
 
 const formatColors: Record<string, string> = {
   게임: 'bg-blue-50 text-blue-700',
   퀴즈: 'bg-green-50 text-green-700',
   '만들기 도구': 'bg-purple-50 text-purple-700',
+  GPT: 'bg-orange-50 text-orange-700',
+  PDF: 'bg-stone-100 text-stone-700',
 };
+
+function actionLabel(format: string): string {
+  if (format === '만들기 도구') return '도구 열기';
+  if (format === 'GPT') return 'GPT 열기';
+  return '바로 하기';
+}
 
 function ordered(values: string[], order: string[]): string[] {
   const set = new Set(values);
@@ -97,12 +105,8 @@ function GameCard({ game, loggedIn }: { game: Game; loggedIn: boolean }) {
             </span>
           ))}
         </div>
-        {loggedIn && game.linkUrl ? (
-          <a href={game.linkUrl} target="_blank" rel="noopener noreferrer" className={btnClass}>
-            {game.format === '만들기 도구' ? '도구 열기' : '바로 하기'}
-          </a>
-        ) : (
-          <Link href={`/login?next=${encodeURIComponent(`/resources/games#${game.id}`)}`} className={btnClass}>
+        {!loggedIn ? (
+          <Link href={`/login?next=${encodeURIComponent(`/resources#${game.id}`)}`} className={btnClass}>
             <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
               <path
                 fillRule="evenodd"
@@ -110,9 +114,17 @@ function GameCard({ game, loggedIn }: { game: Game; loggedIn: boolean }) {
                 clipRule="evenodd"
               />
             </svg>
-            로그인하고 무료로 하기
+            {game.format === 'PDF' ? '로그인하고 무료로 받기' : '로그인하고 무료로 하기'}
           </Link>
-        )}
+        ) : game.linkUrl ? (
+          <a href={game.linkUrl} target="_blank" rel="noopener noreferrer" className={btnClass}>
+            {actionLabel(game.format)}
+          </a>
+        ) : game.fileUrl ? (
+          <a href={game.fileUrl} download={game.downloadName ?? ''} className={btnClass}>
+            무료 다운로드
+          </a>
+        ) : null}
       </div>
     </article>
   );
@@ -151,8 +163,8 @@ export default function GameBrowser({ games, loggedIn }: { games: Game[]; logged
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="예: 한자, 방향, 쓰기"
-          aria-label="학습게임 검색"
+          placeholder="예: 한자, 방향, 읽기, 국시"
+          aria-label="무료 자료 검색"
           className="w-full px-4 py-3 rounded-full border border-hairline bg-canvas text-[15px] text-ink placeholder:text-ink-light focus:outline-none focus:border-primary"
         />
         <FilterRow label="대상" options={audienceOptions} selected={audiences} onToggle={toggle(setAudiences)} />
@@ -191,7 +203,7 @@ export default function GameBrowser({ games, loggedIn }: { games: Game[]; logged
       ) : (
         <div className="bg-canvas rounded-[18px] p-10 border border-hairline text-center">
           <p className="text-[17px] text-ink-muted">조건에 맞는 활동이 아직 없어요.</p>
-          <p className="text-[14px] text-ink-light mt-2">필터를 줄여 보거나, 곧 추가될 새 게임을 기다려 주세요.</p>
+          <p className="text-[14px] text-ink-light mt-2">필터를 줄여 보거나, 곧 추가될 새 자료를 기다려 주세요.</p>
         </div>
       )}
     </>

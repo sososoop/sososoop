@@ -1,17 +1,18 @@
 import type { Metadata } from 'next';
-import { freeResources, paidResources } from '@/data/resources';
-import { getResourcesCached } from '@/lib/notion';
+import { paidResources } from '@/data/resources';
+import { games as staticFree } from '@/data/games';
+import { getGamesCached, getResourcesCached } from '@/lib/notion';
 import { createClient } from '@/lib/supabase/server';
 import ResourceTabs from '@/components/ResourceTabs';
 
 export const metadata: Metadata = {
   title: '자료실',
   description:
-    '임상 현장에서 바로 쓸 수 있는 무료·유료 자료를 제공합니다. AI 프롬프트 모음, 학습 자료 제작 GPT 등.',
+    '수업에 바로 꺼내 쓰는 무료 학습게임·만들기 도구·GPT·PDF와 유료 자료. 대상·영역 키워드로 필요한 자료를 골라 쓰세요.',
 };
 
-// 무료 자료도 로그인한 회원에게만 열어주므로 요청마다 세션을 확인한다.
-// (Notion 조회는 getResourcesCached가 60초 캐시)
+// 무료 자료 목록은 누구나 보고, 링크·파일은 로그인한 회원에게만 내려 준다.
+// 무료 자료는 Notion 「소소숲 무료 자료」 표, 유료 자료는 「소소숲 자료실」 표에서 읽는다(각 60초 캐시).
 export const dynamic = 'force-dynamic';
 
 export default async function ResourcesPage({
@@ -24,11 +25,11 @@ export default async function ResourcesPage({
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const notionResources = await getResourcesCached();
+  const loggedIn = !!user;
+  const [notionFree, notionResources] = await Promise.all([getGamesCached(), getResourcesCached()]);
 
-  const free = notionResources
-    ? notionResources.filter((r) => r.type === 'free')
-    : freeResources;
+  const allFree = notionFree ?? staticFree;
+  const free = loggedIn ? allFree : allFree.map((g) => ({ ...g, linkUrl: undefined, fileUrl: undefined }));
 
   const paid = notionResources
     ? notionResources.filter((r) => r.type === 'paid')
@@ -45,14 +46,15 @@ export default async function ResourcesPage({
             소소숲 자료실
           </h1>
           <p className="text-[17px] text-ink-muted leading-[1.47]">
-            임상 현장에서 바로 쓸 수 있는 자료를 제공합니다.
+            수업에 바로 꺼내 쓰는 학습게임과 자료를 모았어요.
+            <br className="hidden md:block" /> 대상·영역 키워드로 오늘 필요한 것을 골라 보세요.
           </p>
         </div>
       </section>
 
       <section className="bg-canvas py-12 px-6">
         <div className="max-w-[1000px] mx-auto">
-          <ResourceTabs freeResources={free} paidResources={paid} loggedIn={!!user} initialTab={tab === 'paid' ? 'paid' : 'free'} />
+          <ResourceTabs freeItems={free} paidResources={paid} loggedIn={loggedIn} initialTab={tab === 'paid' ? 'paid' : 'free'} />
         </div>
       </section>
     </>

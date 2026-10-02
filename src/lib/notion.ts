@@ -17,6 +17,7 @@ const resourceKeywordImageMap: Array<{ keyword: string; image: string }> = [
   { keyword: '색칠공부 공방', image: '/images/resource-coloring-book-gpt.png' },
   { keyword: '색연필 그림봇', image: '/images/resource-cute-pencil-character-gpt.png' },
   { keyword: '읽기쏙쏙', image: '/images/resource-reading-gpt.png' },
+  { keyword: 'AI 프롬프트 모음집', image: '/images/resource-ai-prompt-guide.png' },
 ];
 
 function findStaticImage(title: string, staticItems: { title: string; image?: string }[]): string | undefined {
@@ -146,7 +147,7 @@ export async function getLectures(): Promise<Lecture[] | null> {
   }
 }
 
-// 무료 학습게임(/resources/games). '공개'를 체크한 행만 보여 준다.
+// 자료실 '무료 자료' 탭(게임·도구·GPT·PDF). '공개'를 체크한 행만 보여 준다.
 export async function getGames(): Promise<Game[] | null> {
   const dsId = process.env.NOTION_GAMES_DS_ID;
   if (!dsId || !process.env.NOTION_TOKEN) return null;
@@ -174,7 +175,9 @@ export async function getGames(): Promise<Game[] | null> {
           format: select(props, '형태') ?? '',
           time: text(props, '시간'),
           linkUrl: url(props, '링크URL'),
-          image: url(props, '이미지URL') ?? findStaticImage(title, staticGames),
+          fileUrl: text(props, '파일URL') || undefined,
+          downloadName: text(props, '다운로드파일명') || undefined,
+          image: url(props, '이미지URL') ?? findStaticImage(title, staticGames) ?? findKeywordImage(title),
         };
       });
   } catch {
