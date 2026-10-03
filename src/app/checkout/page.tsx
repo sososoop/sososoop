@@ -1,8 +1,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { resolveOrder } from '@/lib/products';
+import { periodLabelFor, resolveOrder } from '@/lib/products';
 import { createClient } from '@/lib/supabase/server';
-import { SERVICE_PERIOD_LABEL } from '@/lib/period';
 import CheckoutClient from './CheckoutClient';
 
 // 로그인 세션을 매 요청 확인해야 하므로 정적 캐시하지 않는다.
@@ -52,11 +51,13 @@ export default async function CheckoutPage({
       order={{
         orderName: order.orderName,
         amount: order.total,
-        lines: order.items.map((it) => ({
-          title: it.title,
-          amount: it.amount,
-          period: SERVICE_PERIOD_LABEL,
-        })),
+        lines: await Promise.all(
+          order.items.map(async (it) => ({
+            title: it.title,
+            amount: it.amount,
+            period: await periodLabelFor(it.id),
+          })),
+        ),
         query,
       }}
     />

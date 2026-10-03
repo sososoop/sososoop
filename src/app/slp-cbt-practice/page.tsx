@@ -1,7 +1,8 @@
 import type { Metadata } from 'next';
 import { createClient } from '@/lib/supabase/server';
 import { isAdmin } from '@/lib/admin';
-import { hasCbtEntitlement } from '@/lib/entitlements';
+import { getCbtEntitlement } from '@/lib/entitlements';
+import { CBT_PERIOD_LABEL, CBT_PERIOD_MONTHS, formatKoreanDate } from '@/lib/period';
 import { getCartItem } from '@/lib/products';
 import LockedPreview, { type PreviewFeature, type PreviewShot } from '@/components/LockedPreview';
 import DeviceGate from './DeviceGate';
@@ -69,14 +70,14 @@ const FEATURES: PreviewFeature[] = [
     desc: '실제 시험의 과목 구성·문항 유형을 따른 창작 연습 문항으로, 문항은 계속 추가·업데이트됩니다.',
   },
   {
-    title: '6개월 동안 무제한 응시',
-    desc: '결제일로부터 6개월 동안 횟수 제한 없이 반복해서 응시할 수 있습니다. 기간 중 추가 결제가 없어요.',
+    title: `${CBT_PERIOD_MONTHS}개월 동안 무제한 응시`,
+    desc: `결제일로부터 ${CBT_PERIOD_MONTHS}개월 동안 횟수 제한 없이 반복해서 응시할 수 있습니다. 기간 중 추가 결제가 없어요.`,
   },
 ];
 
 const NOTES = [
   '이용권을 구매한 소소숲 회원만 이용할 수 있습니다.',
-  '이용기간은 결제일로부터 6개월이며, 기간 중 추가되는 문항도 그대로 이용할 수 있습니다.',
+  `이용기간은 ${CBT_PERIOD_LABEL}이며, 기간 중 추가되는 문항도 그대로 이용할 수 있습니다. 기간이 끝나면 이용권을 다시 구매해 이어서 쓸 수 있어요.`,
   '개인 학습용이라 계정당 사용 기기가 제한됩니다. 기기를 바꾸면 고객센터로 문의해 주세요.',
   '오답노트와 응시 기록은 이용하는 기기의 브라우저에 저장됩니다. 기기를 바꾸거나 브라우저 데이터를 지우면 초기화돼요.',
   '문항과 해설은 앱 화면에서만 볼 수 있으며 인쇄·PDF 저장은 지원하지 않습니다. 캡처·공유 등 무단 복제·배포는 이용약관에 따라 금지됩니다.',
@@ -93,11 +94,17 @@ export default async function CbtPracticePage() {
   // 비로그인 / 미결제 → 로그인 폼 대신 소개 + 미리보기 화면을 보여준다.
   // (앱 HTML을 내려주는 /slp-cbt-practice/app 라우트가 실제 게이트를 다시 확인한다)
   // 관리자 계정은 이용권 없이 통과(기기 제한도 bind·app 라우트에서 건너뜀).
-  const entitled = user ? isAdmin(user) || (await hasCbtEntitlement(user.id)) : false;
+  // 이용권은 결제일(지급일)부터 3개월 — 끝났으면 끝난 날을 알려 주고 다시 구매하게 한다.
+  const adminUser = user ? isAdmin(user) : false;
+  const access = user && !adminUser ? await getCbtEntitlement(user.id) : null;
+  const entitled = adminUser || !!access?.ok;
   if (!entitled) {
+    const expiredOn = access?.expiresAt ? formatKoreanDate(access.expiresAt) : undefined;
     return (
       <LockedPreview
-        state={user ? 'unpaid' : 'anonymous'}
+        state={!user ? 'anonymous' : expiredOn ? 'expired' : 'unpaid'}
+        expiredOn={expiredOn}
+        periodLabel={CBT_PERIOD_LABEL}
         eyebrow="국가시험 대비"
         title="언어재활사 CBT 연습"
         tagline="실제 시험과 동일한 교시 구성·제한시간·화면으로 연습하고, 문항마다 상세한 해설로 복습하는 온라인 모의 CBT입니다."
@@ -117,5 +124,7 @@ export default async function CbtPracticePage() {
   }
 
   // 결제 확인됨 — 기기 바인딩 후 앱 표시
-  return <DeviceGate />;
+  return (
+    <DeviceGate expiresOn={access?.expiresAt ? formatKoreanDate(access.expiresAt) : null} />
+  );
 }

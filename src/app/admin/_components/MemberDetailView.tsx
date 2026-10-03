@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import { ENTITLEMENT_PRODUCTS } from '@/lib/entitlements';
+import { ENTITLEMENT_PRODUCTS, isEntitlementActive } from '@/lib/entitlements';
+import { formatKoreanDate } from '@/lib/period';
 import type { MemberDetail } from '@/lib/admin-data';
 import { changeOrderStatus, grantEntitlement, resetCbtDevice, revokeGrant } from '../actions';
 import ConfirmSubmit from './ConfirmSubmit';
@@ -52,19 +53,26 @@ export default function MemberDetailView({ detail }: { detail: MemberDetail }) {
           <div className="flex flex-col divide-y divide-hairline">
             {ENTITLEMENT_PRODUCTS.map(({ alias, label }) => {
               const sources = member.entitlements[alias];
-              const activeGrant = grants.find((g) => g.product === alias && !g.revoked_at);
+              const activeGrant = grants.find(
+                (g) => g.product === alias && !g.revoked_at && isEntitlementActive(alias, g.granted_at),
+              );
+              const expiresAt = member.expiresAt[alias];
+              const until = expiresAt ? formatKoreanDate(new Date(expiresAt)) : null;
               return (
                 <div key={alias} className="py-4 first:pt-0 last:pb-0 flex flex-wrap items-center gap-3">
                   <span className="w-24 shrink-0 text-[15px] font-medium text-ink">{label}</span>
                   <span className="flex-1 min-w-[160px] text-[14px] text-ink-muted">
                     {sources.length === 0
-                      ? '없음'
+                      ? until
+                        ? `없음 (${until} 기간 끝남)`
+                        : '없음'
                       : [
                           sources.includes('paid') && '결제로 보유',
                           activeGrant &&
                             `관리자 지급 (${formatDateTime(activeGrant.granted_at)}${
                               activeGrant.note ? ` · ${activeGrant.note}` : ''
                             })`,
+                          until && `${until}까지`,
                         ]
                           .filter(Boolean)
                           .join(' / ')}

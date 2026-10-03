@@ -4,7 +4,9 @@ import type { User } from '@supabase/supabase-js';
 import { createAdminClient } from '@/lib/supabase/admin';
 import {
   ENTITLEMENT_PRODUCTS,
+  entitlementEnd,
   entitlementProductIds,
+  isEntitlementActive,
   slugIds,
   type EntitlementAlias,
 } from '@/lib/entitlements';
@@ -46,6 +48,8 @@ export type MemberSummary = {
   createdAt: string;
   lastSignInAt: string | null;
   entitlements: Record<EntitlementAlias, EntitlementSource[]>;
+  // 기간이 있는 이용권(CBT)의 가장 늦게 끝나는 날(ISO). 이미 끝났어도 남긴다. 기간 검사가 없거나 없으면 null.
+  expiresAt: Record<EntitlementAlias, string | null>;
   paidTotal: number;
   orderCount: number;
   waitingDeposit: number;
@@ -81,13 +85,27 @@ export function summarizeMember(
   const done = orders.filter((o) => o.status === 'DONE');
 
   const entitlements = {} as Record<EntitlementAlias, EntitlementSource[]>;
+  const expiresAt = {} as Record<EntitlementAlias, string | null>;
   for (const { alias } of ENTITLEMENT_PRODUCTS) {
+    const paidStarts = done
+      .filter((o) => slugIds(o.product_slug).some((id) => productIds[alias].includes(id)))
+      .map((o) => o.created_at);
+    const grantStarts = grants
+      .filter((g) => g.product === alias && !g.revoked_at)
+      .map((g) => g.granted_at);
+
+    // 기간이 끝난 결제·지급은 보유로 세지 않는다
     const sources: EntitlementSource[] = [];
-    if (done.some((o) => slugIds(o.product_slug).some((id) => productIds[alias].includes(id)))) {
-      sources.push('paid');
-    }
-    if (grants.some((g) => g.product === alias && !g.revoked_at)) sources.push('granted');
+    if (paidStarts.some((t) => isEntitlementActive(alias, t))) sources.push('paid');
+    if (grantStarts.some((t) => isEntitlementActive(alias, t))) sources.push('granted');
     entitlements[alias] = sources;
+
+    const ends = [...paidStarts, ...grantStarts]
+      .map((t) => entitlementEnd(alias, t))
+      .filter((d): d is Date => d !== null);
+    expiresAt[alias] = ends.length
+      ? new Date(Math.max(...ends.map((d) => d.getTime()))).toISOString()
+      : null;
   }
 
   return {
@@ -98,6 +116,7 @@ export function summarizeMember(
     createdAt: user.created_at,
     lastSignInAt: user.last_sign_in_at ?? null,
     entitlements,
+    expiresAt,
     paidTotal: done.reduce((sum, o) => sum + (o.amount ?? 0), 0),
     orderCount: orders.length,
     waitingDeposit: orders.filter((o) => o.status === 'WAITING_FOR_DEPOSIT').length,

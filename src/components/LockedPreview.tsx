@@ -7,6 +7,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import AddToCartButton from '@/components/AddToCartButton';
+import { SERVICE_PERIOD_LABEL } from '@/lib/period';
 import type { CartItem } from '@/lib/cart';
 
 export type PreviewShot = {
@@ -32,8 +33,12 @@ type Props = {
   /** [장바구니 담기]에 담을 상품. 없으면 버튼을 숨긴다. */
   cartItem?: CartItem | null;
   loginHref: string;
-  /** anonymous = 비로그인, unpaid = 로그인했지만 이용권 없음 */
-  state: 'anonymous' | 'unpaid';
+  /** anonymous = 비로그인, unpaid = 로그인했지만 이용권 없음, expired = 이용기간이 끝남 */
+  state: 'anonymous' | 'unpaid' | 'expired';
+  /** state가 expired일 때 끝난 날 (예: '2027년 1월 3일') */
+  expiredOn?: string;
+  /** 구매 버튼 아래 이용기간 표기 */
+  periodLabel?: string;
 };
 
 export default function LockedPreview({
@@ -48,6 +53,8 @@ export default function LockedPreview({
   cartItem,
   loginHref,
   state,
+  expiredOn,
+  periodLabel = SERVICE_PERIOD_LABEL,
 }: Props) {
   const [active, setActive] = useState(0);
   const shot = shots[active];
@@ -88,9 +95,15 @@ export default function LockedPreview({
               </Link>
             )}
           </div>
-          <p className="mt-4 text-[13px] text-on-dark/50">
-            🔒 이용권을 구매한 소소숲 회원만 이용할 수 있는 유료 서비스입니다.
-          </p>
+          {state === 'expired' ? (
+            <p className="mt-4 text-[14px] text-on-dark/80">
+              ⏰ 이용기간이 {expiredOn}에 끝났어요. 이용권을 다시 구매하면 바로 이어서 이용할 수 있어요.
+            </p>
+          ) : (
+            <p className="mt-4 text-[13px] text-on-dark/50">
+              🔒 이용권을 구매한 소소숲 회원만 이용할 수 있는 유료 서비스입니다.
+            </p>
+          )}
         </div>
       </section>
 
@@ -183,7 +196,9 @@ export default function LockedPreview({
             <p className="text-[14px] text-ink-muted leading-relaxed mb-6">
               {state === 'anonymous'
                 ? '구매 후 소소숲 계정으로 로그인하면 이 페이지에서 바로 시작할 수 있어요.'
-                : '이용권을 구매하면 이 페이지에서 바로 시작할 수 있어요.'}
+                : state === 'expired'
+                  ? `이용기간이 ${expiredOn}에 끝났어요. 다시 구매하면 이 페이지에서 바로 이어서 쓸 수 있어요.`
+                  : '이용권을 구매하면 이 페이지에서 바로 시작할 수 있어요.'}
             </p>
             <Link
               href={checkoutHref}
@@ -197,7 +212,7 @@ export default function LockedPreview({
                 className="block w-full mt-2.5 px-6 py-3 rounded-full border border-primary bg-white text-primary text-[15px] font-semibold hover:bg-primary/5 transition-colors active:scale-95"
               />
             )}
-            <p className="mt-3 text-[12px] text-ink-light">이용기간: 결제일로부터 6개월</p>
+            <p className="mt-3 text-[12px] text-ink-light">이용기간: {periodLabel}</p>
             <Link
               href="/resources"
               className="inline-block mt-4 text-[13px] text-ink-muted underline hover:text-primary transition-colors"

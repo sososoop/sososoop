@@ -2,9 +2,11 @@
 // 이용권은 두 곳에서 생긴다.
 //   1) 결제: orders 테이블에 status='DONE' 으로 기록된 주문
 //   2) 관리자 지급: entitlement_grants 테이블의 취소되지 않은 행
+// CBT는 결제일(지급일)부터 3개월만 쓸 수 있다(2026-10-03). 한글놀이는 아직 기간 검사가 없다.
 // 조회는 RLS를 우회하는 service_role로 한다.
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getPurchasable } from '@/lib/products';
+import { CBT_PERIOD_MONTHS, periodEnd } from '@/lib/period';
 
 export const ENTITLEMENT_PRODUCTS = [
   { alias: 'hangul', label: '한글놀이' },
@@ -39,41 +41,84 @@ export async function entitlementProductIds(): Promise<Record<EntitlementAlias, 
   return Object.fromEntries(entries) as Record<EntitlementAlias, string[]>;
 }
 
-async function hasEntitlement(
+// 이용권별 이용기간(개월). 없으면 기간 검사를 하지 않는다.
+const PERIOD_MONTHS: Partial<Record<EntitlementAlias, number>> = { cbt: CBT_PERIOD_MONTHS };
+
+// 결제일·지급일에서 이 이용권이 끝나는 시각. 기간 검사가 없는 이용권은 null(계속).
+export function entitlementEnd(alias: EntitlementAlias, startedAt: string): Date | null {
+  const months = PERIOD_MONTHS[alias];
+  return months ? periodEnd(startedAt, months) : null;
+}
+
+export function isEntitlementActive(
+  alias: EntitlementAlias,
+  startedAt: string,
+  now = Date.now(),
+): boolean {
+  const end = entitlementEnd(alias, startedAt);
+  return !end || end.getTime() > now;
+}
+
+export type EntitlementStatus = {
+  ok: boolean;
+  // 기간이 있는 이용권: 가장 늦게 끝나는 날(이미 끝났으면 끝난 날). 기간 검사가 없거나 산 적이 없으면 null.
+  expiresAt: Date | null;
+};
+
+async function getEntitlement(
   userId: string | undefined | null,
   alias: EntitlementAlias,
-): Promise<boolean> {
-  if (!userId) return false;
+): Promise<EntitlementStatus> {
+  const none: EntitlementStatus = { ok: false, expiresAt: null };
+  if (!userId) return none;
   const admin = createAdminClient();
-  if (!admin) return false;
+  if (!admin) return none;
 
   const [ids, orders, grants] = await Promise.all([
     idsFor(alias),
-    admin.from('orders').select('product_slug').eq('user_id', userId).eq('status', 'DONE'),
+    admin
+      .from('orders')
+      .select('product_slug, created_at')
+      .eq('user_id', userId)
+      .eq('status', 'DONE'),
     admin
       .from('entitlement_grants')
-      .select('id')
+      .select('granted_at')
       .eq('user_id', userId)
       .eq('product', alias)
-      .is('revoked_at', null)
-      .limit(1),
+      .is('revoked_at', null),
   ]);
 
-  const paid =
-    !orders.error &&
-    (orders.data ?? []).some((row) => slugIds(row.product_slug).some((id) => ids.includes(id)));
-  if (paid) return true;
-
+  // 이용을 시작한 때 = 결제일 또는 지급일
+  const starts: string[] = [];
+  if (!orders.error) {
+    for (const row of orders.data ?? []) {
+      if (slugIds(row.product_slug).some((id) => ids.includes(id))) starts.push(row.created_at);
+    }
+  }
   // 지급 테이블이 아직 없으면(SQL 미실행) 에러가 난다 → 지급 없음으로 본다.
-  return !grants.error && (grants.data?.length ?? 0) > 0;
+  if (!grants.error) {
+    for (const row of grants.data ?? []) starts.push(row.granted_at);
+  }
+  if (starts.length === 0) return none;
+
+  const ends = starts.map((start) => entitlementEnd(alias, start));
+  if (ends.some((end) => end === null)) return { ok: true, expiresAt: null };
+  const latest = new Date(Math.max(...ends.map((end) => (end as Date).getTime())));
+  return { ok: latest.getTime() > Date.now(), expiresAt: latest };
+}
+
+// CBT 이용권 상태 — 이용 가능 여부와 끝나는 날.
+export function getCbtEntitlement(userId: string | undefined | null): Promise<EntitlementStatus> {
+  return getEntitlement(userId, 'cbt');
 }
 
 // CBT 연습앱 이용권 보유 여부.
-export function hasCbtEntitlement(userId: string | undefined | null): Promise<boolean> {
-  return hasEntitlement(userId, 'cbt');
+export async function hasCbtEntitlement(userId: string | undefined | null): Promise<boolean> {
+  return (await getEntitlement(userId, 'cbt')).ok;
 }
 
 // 한글놀이 이용권 보유 여부.
-export function hasHangulEntitlement(userId: string | undefined | null): Promise<boolean> {
-  return hasEntitlement(userId, 'hangul');
+export async function hasHangulEntitlement(userId: string | undefined | null): Promise<boolean> {
+  return (await getEntitlement(userId, 'hangul')).ok;
 }

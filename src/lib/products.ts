@@ -5,6 +5,7 @@
 import { getResources, getLectures } from '@/lib/notion';
 import { freeResources, paidResources, type Resource } from '@/data/resources';
 import { lectures as staticLectures, type Lecture } from '@/data/lectures';
+import { CBT_PERIOD_LABEL, SERVICE_PERIOD_LABEL } from '@/lib/period';
 
 export type Purchasable = {
   id: string;
@@ -66,6 +67,13 @@ export async function getPurchasable(
   const id = resolveAlias(rawId, paid);
 
   return pickResource(paid, id) ?? pickLecture(lects, id);
+}
+
+// 상품의 이용기간 문구. CBT 이용권만 3개월, 나머지는 6개월.
+export async function periodLabelFor(rawId: string): Promise<string> {
+  if (rawId === 'cbt') return CBT_PERIOD_LABEL;
+  const paid = (await loadResources()).filter((r) => r.type === 'paid');
+  return resolveAlias('cbt', paid) === rawId ? CBT_PERIOD_LABEL : SERVICE_PERIOD_LABEL;
 }
 
 // 이용권 소개 화면의 [장바구니 담기]용. 별칭(cbt·hangul)을 실제 상품 id로 풀어

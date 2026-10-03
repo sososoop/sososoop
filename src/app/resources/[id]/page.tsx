@@ -5,6 +5,7 @@ import { freeResources, paidResources, type Resource } from '@/data/resources';
 import { getResourcesCached } from '@/lib/notion';
 import { createClient } from '@/lib/supabase/server';
 import BuyButtons from '@/components/BuyButtons';
+import { periodLabelFor } from '@/lib/products';
 
 // 무료 자료도 로그인 회원에게만 열어주므로 요청마다 세션을 확인한다.
 // (Notion 조회는 getResourcesCached가 60초 캐시)
@@ -44,6 +45,7 @@ export default async function ResourceDetailPage({
   const loginHref = `/login?next=${encodeURIComponent(`/resources/${id}`)}`;
 
   const isPaid = resource.type === 'paid' && typeof resource.price === 'number' && resource.price > 0;
+  const periodLabel = isPaid ? await periodLabelFor(resource.id) : '';
 
   return (
     <main className="bg-canvas py-10 px-6 min-h-[70vh]">
@@ -149,7 +151,7 @@ export default async function ResourceDetailPage({
 
               <p className="text-[12px] text-ink-light text-center mt-3 leading-relaxed">
                 {isPaid
-                  ? '이용기간: 결제일로부터 6개월 · 토스페이먼츠 안전결제'
+                  ? `이용기간: ${periodLabel} · 토스페이먼츠 안전결제`
                   : user
                     ? '소소숲 회원에게 무료로 제공되는 자료입니다.'
                     : '로그인하면 무료로 받을 수 있어요. 구글·카카오 계정으로 바로 로그인할 수 있습니다.'}
@@ -182,7 +184,7 @@ export default async function ResourceDetailPage({
                   </li>
                   <li className="flex items-start gap-2.5">
                     <span className="text-primary mt-0.5">✓</span>
-                    이용기간은 결제일로부터 6개월입니다.
+                    이용기간은 {periodLabel}입니다.
                   </li>
                   <li className="flex items-start gap-2.5">
                     <span className="text-primary mt-0.5">✓</span>

@@ -32,7 +32,8 @@ function bindOnce(): Promise<number> {
 
 type State = 'checking' | 'ok' | 'conflict' | 'error';
 
-export default function DeviceGate() {
+// expiresOn: 이용권이 끝나는 날(예: '2027년 1월 3일'). 관리자 계정은 null.
+export default function DeviceGate({ expiresOn }: { expiresOn: string | null }) {
   const [state, setState] = useState<State>('checking');
 
   useEffect(() => {
@@ -64,11 +65,16 @@ export default function DeviceGate() {
 
   if (state === 'ok') {
     return (
-      <div className="w-full" style={{ height: 'calc(100dvh - 2.75rem)' }}>
+      <div className="w-full flex flex-col" style={{ height: 'calc(100dvh - 2.75rem)' }}>
+        {expiresOn && (
+          <p className="shrink-0 py-1 text-center text-[12px] text-ink-muted bg-pearl border-b border-hairline">
+            이용기간: {expiresOn}까지
+          </p>
+        )}
         <iframe
           src="/slp-cbt-practice/app"
           title="언어재활사 CBT 연습"
-          className="block w-full h-full border-0"
+          className="block w-full flex-1 min-h-0 border-0"
           allow="fullscreen; clipboard-write"
         />
       </div>

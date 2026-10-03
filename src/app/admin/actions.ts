@@ -4,7 +4,7 @@
 // 매 액션마다 관리자 세션을 다시 확인하고, 입력은 전부 검증한다.
 import { revalidatePath } from 'next/cache';
 import { getAdminUser } from '@/lib/admin';
-import { isEntitlementAlias } from '@/lib/entitlements';
+import { isEntitlementActive, isEntitlementAlias } from '@/lib/entitlements';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -47,14 +47,14 @@ export async function grantEntitlement(formData: FormData) {
 
   const existing = await db
     .from('entitlement_grants')
-    .select('id')
+    .select('granted_at')
     .eq('user_id', userId)
     .eq('product', product)
-    .is('revoked_at', null)
-    .limit(1);
+    .is('revoked_at', null);
   if (existing.error) throw new Error(`지급 실패: ${existing.error.message}`);
 
-  if ((existing.data?.length ?? 0) === 0) {
+  // 기간이 끝난 지급은 없는 것으로 보고 새로 지급한다(CBT는 지급일부터 3개월).
+  if (!(existing.data ?? []).some((g) => isEntitlementActive(product, g.granted_at))) {
     const { error } = await db.from('entitlement_grants').insert({ user_id: userId, product, note });
     if (error) throw new Error(`지급 실패: ${error.message}`);
   }
