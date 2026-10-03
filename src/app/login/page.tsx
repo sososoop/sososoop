@@ -5,10 +5,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 
 export default function LoginPage() {
-  const [loading, setLoading] = useState<'google' | 'kakao' | 'email' | null>(null);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [emailError, setEmailError] = useState('');
+  const [loading, setLoading] = useState<'google' | 'kakao' | null>(null);
   const [hasError, setHasError] = useState(false);
 
   // useSearchParams(서버 Suspense 바일아웃) 대신 클라이언트에서 직접 읽어 즉시 렌더.
@@ -32,23 +29,6 @@ export default function LoginPage() {
       setLoading(null);
       alert('로그인을 시작하지 못했어요. 잠시 후 다시 시도해 주세요.');
     }
-  };
-
-  // 아이디·비밀번호 로그인(가입은 받지 않음 — 관리자가 만든 계정만 사용).
-  const signInWithEmail = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setEmailError('');
-    setLoading('email');
-    const supabase = createClient();
-    const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
-    if (error) {
-      setLoading(null);
-      setEmailError('이메일 또는 비밀번호가 올바르지 않아요.');
-      return;
-    }
-    const nextParam = new URLSearchParams(window.location.search).get('next');
-    const next = nextParam && nextParam.startsWith('/') ? nextParam : '/';
-    window.location.assign(next);
   };
 
   return (
@@ -88,41 +68,6 @@ export default function LoginPage() {
             {loading === 'kakao' ? '이동 중…' : '카카오로 시작하기'}
           </button>
         </div>
-
-        <div className="my-6 flex items-center gap-3 text-xs text-gray-400">
-          <span className="h-px flex-1 bg-gray-200" />
-          이메일로 로그인
-          <span className="h-px flex-1 bg-gray-200" />
-        </div>
-
-        <form onSubmit={signInWithEmail} className="space-y-2.5">
-          <input
-            type="email"
-            autoComplete="username"
-            required
-            placeholder="이메일"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm outline-none focus:border-gray-500"
-          />
-          <input
-            type="password"
-            autoComplete="current-password"
-            required
-            placeholder="비밀번호"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm outline-none focus:border-gray-500"
-          />
-          {emailError && <p className="text-center text-sm text-red-600">{emailError}</p>}
-          <button
-            type="submit"
-            disabled={loading !== null}
-            className="w-full rounded-xl bg-gray-800 px-4 py-3 font-medium text-white transition hover:bg-gray-700 disabled:opacity-60"
-          >
-            {loading === 'email' ? '로그인 중…' : '로그인'}
-          </button>
-        </form>
 
         <p className="mt-8 text-center text-xs text-gray-400">
           로그인 시 소소숲{' '}
