@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { createClient } from '@/lib/supabase/server';
 import { isAdmin } from '@/lib/admin';
 import { getCbtEntitlement } from '@/lib/entitlements';
-import { CBT_PERIOD_LABEL, CBT_PERIOD_MONTHS, formatKoreanDate } from '@/lib/period';
+import { CBT_PERIOD_LABEL, CBT_PERIOD_MONTHS, formatKoreanDate, periodEnd } from '@/lib/period';
 import { getCartItem } from '@/lib/products';
 import LockedPreview, { type PreviewFeature, type PreviewShot } from '@/components/LockedPreview';
 import DeviceGate from './DeviceGate';
@@ -85,7 +85,21 @@ const NOTES = [
   '본 서비스는 한국보건의료인국가시험원(국시원)과 무관한 개인 학습용 연습 도구입니다.',
 ];
 
-export default async function CbtPracticePage() {
+// 관리자 미리보기용 예시 날짜 — 어제 끝남 / 오늘 결제했다면 끝나는 날
+function previewDates() {
+  const now = Date.now();
+  return {
+    previewExpiredOn: formatKoreanDate(new Date(now - 86400000)),
+    previewActiveUntil: formatKoreanDate(periodEnd(new Date(now), CBT_PERIOD_MONTHS)),
+  };
+}
+
+export default async function CbtPracticePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ preview?: string }>;
+}) {
+  const { preview } = await searchParams;
   const supabase = await createClient();
   const {
     data: { user },
@@ -97,9 +111,20 @@ export default async function CbtPracticePage() {
   // 이용권은 결제일(지급일)부터 3개월 — 끝났으면 끝난 날을 알려 주고 다시 구매하게 한다.
   const adminUser = user ? isAdmin(user) : false;
   const access = user && !adminUser ? await getCbtEntitlement(user.id) : null;
-  const entitled = adminUser || !!access?.ok;
+
+  // 관리자 전용 화면 미리보기(?preview=expired · ?preview=active). 날짜는 예시 값.
+  // 관리자가 아니면 무시한다 → 이용권 검사를 우회하는 통로가 되지 않는다.
+  const previewMode = adminUser && (preview === 'expired' || preview === 'active') ? preview : null;
+  const { previewExpiredOn, previewActiveUntil } = previewDates();
+
+  const entitled = previewMode === 'expired' ? false : adminUser || !!access?.ok;
   if (!entitled) {
-    const expiredOn = access?.expiresAt ? formatKoreanDate(access.expiresAt) : undefined;
+    const expiredOn =
+      previewMode === 'expired'
+        ? previewExpiredOn
+        : access?.expiresAt
+          ? formatKoreanDate(access.expiresAt)
+          : undefined;
     return (
       <LockedPreview
         state={!user ? 'anonymous' : expiredOn ? 'expired' : 'unpaid'}
@@ -124,7 +149,11 @@ export default async function CbtPracticePage() {
   }
 
   // 결제 확인됨 — 기기 바인딩 후 앱 표시
-  return (
-    <DeviceGate expiresOn={access?.expiresAt ? formatKoreanDate(access.expiresAt) : null} />
-  );
+  const expiresOn =
+    previewMode === 'active'
+      ? previewActiveUntil
+      : access?.expiresAt
+        ? formatKoreanDate(access.expiresAt)
+        : null;
+  return <DeviceGate expiresOn={expiresOn} />;
 }
