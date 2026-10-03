@@ -100,7 +100,13 @@ export default function Header() {
           <span className="w-px h-4 bg-white/20" aria-hidden />
           {user ? (
             <span className="flex items-center gap-3">
-              <span className="text-[12px] text-primary-on-dark">{displayName(user)}님</span>
+              <Link
+                href="/mypage"
+                className="text-[12px] text-primary-on-dark hover:text-on-dark transition-colors"
+                title="마이페이지"
+              >
+                {displayName(user)}님
+              </Link>
               <form action="/auth/signout" method="post">
                 <button
                   type="submit"
@@ -172,7 +178,13 @@ export default function Header() {
           <span className="h-px bg-white/10" aria-hidden />
           {user ? (
             <div className="flex items-center justify-between">
-              <span className="text-sm text-primary-on-dark">{displayName(user)}님</span>
+              <Link
+                href="/mypage"
+                className="text-sm text-primary-on-dark hover:text-on-dark"
+                onClick={() => setMenuOpen(false)}
+              >
+                {displayName(user)}님 · 마이페이지
+              </Link>
               <form action="/auth/signout" method="post">
                 <button type="submit" className="text-sm text-on-dark/70 hover:text-on-dark">
                   로그아웃
