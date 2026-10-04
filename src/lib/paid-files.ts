@@ -19,7 +19,7 @@ const AI_PROMPT_PACK: PaidFile[] = [
     downloadName: '언어치료·특수교육 AI 활용 프롬프트 100_소소숲.pdf',
   },
   {
-    key: 'ai-prompt-pack/source-sites.pdf',
+    key: 'ai-prompt-pack/source-sites-v2.pdf',
     label: '치료 자료 소스 사이트 모음',
     downloadName: '치료 자료 소스 사이트 모음_소소숲.pdf',
   },
