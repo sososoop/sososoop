@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { resolveOrder, getPurchasable } from '@/lib/products';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { paidFilesFor } from '@/lib/paid-files';
 
 export const dynamic = 'force-dynamic';
 
@@ -51,6 +52,8 @@ export default async function PaymentSuccessPage({
   // 주문에 CBT 이용권이 포함됐으면 결제완료 화면에서 바로 앱으로 갈 버튼을 띄운다.
   const cbt = await getPurchasable('cbt');
   const hasCbt = !!order && !!cbt && order.items.some((it) => it.id === cbt.id);
+  // PDF 자료가 들어 있으면 마이페이지에서 받도록 안내한다.
+  const hasFiles = !!order && order.items.some((it) => paidFilesFor(it.id).length > 0);
 
   // 1) 금액 위변조 검증 — 서버가 계산한 총액과 반드시 일치해야 승인 진행
   let result: Awaited<ReturnType<typeof confirmPayment>> | { ok: false; message: string };
@@ -198,6 +201,18 @@ export default async function PaymentSuccessPage({
               className="inline-block w-full px-6 py-3.5 rounded-full bg-primary text-white text-[15px] font-semibold hover:bg-primary-dark transition-colors"
             >
               CBT 연습앱 시작하기 →
+            </Link>
+            <Link href="/" className="text-[13px] text-ink-muted underline">
+              홈으로 돌아가기
+            </Link>
+          </div>
+        ) : hasFiles ? (
+          <div className="flex flex-col items-center gap-3">
+            <Link
+              href="/mypage"
+              className="inline-block w-full px-6 py-3.5 rounded-full bg-primary text-white text-[15px] font-semibold hover:bg-primary-dark transition-colors"
+            >
+              마이페이지에서 PDF 받기 →
             </Link>
             <Link href="/" className="text-[13px] text-ink-muted underline">
               홈으로 돌아가기

@@ -11,12 +11,22 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default async function MyPage() {
+export default async function MyPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const { download } = await searchParams;
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect('/login?next=/mypage');
 
-  return <MyPageView data={await getMyPageData(user)} />;
+  return (
+    <MyPageView
+      data={await getMyPageData(user)}
+      download={typeof download === 'string' ? download : undefined}
+    />
+  );
 }

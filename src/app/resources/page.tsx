@@ -31,9 +31,10 @@ export default async function ResourcesPage({
   const allFree = notionFree ?? staticFree;
   const free = loggedIn ? allFree : allFree.map((g) => ({ ...g, linkUrl: undefined, fileUrl: undefined }));
 
-  const paid = notionResources
-    ? notionResources.filter((r) => r.type === 'paid')
-    : paidResources;
+  // 유료 자료의 링크·파일 주소는 산 사람에게만(마이페이지) 보여 준다.
+  const paid = (notionResources ? notionResources.filter((r) => r.type === 'paid') : paidResources).map(
+    (r) => ({ ...r, linkUrl: undefined, fileUrl: undefined }),
+  );
 
   return (
     <>

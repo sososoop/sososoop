@@ -2,6 +2,8 @@
 import type { User } from '@supabase/supabase-js';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getPurchasable } from '@/lib/products';
+import { getResourcesCached } from '@/lib/notion';
+import { downloadUntil, paidFilesFor } from '@/lib/paid-files';
 import {
   entitlementProductIds,
   getCbtEntitlement,
@@ -12,9 +14,16 @@ import {
 } from '@/lib/entitlements';
 
 export type MyOrderItem = {
+  productId: string;
   title: string;
-  // 이용권이면 바로 가는 주소, 자료·강의면 null(카카오채널로 전달)
+  // 이용권이면 바로 가는 사이트 안 주소
   href: string | null;
+  // 유료 PDF: 받을 수 있는 파일들(결제완료일 때만)과 다시 받을 수 있는 마지막 날
+  files: { key: string; label: string }[];
+  downloadUntil: string | null;
+  downloadOpen: boolean;
+  // 유료 GPT 등 외부 링크(결제완료일 때만)
+  link: string | null;
 };
 
 export type MyOrder = {
@@ -52,23 +61,39 @@ function memberProviders(user: User): string[] {
   return user.app_metadata?.provider ? [String(user.app_metadata.provider)] : [];
 }
 
-async function orderItems(productSlug: unknown, appIds: Record<EntitlementAlias, string[]>) {
+async function orderItems(
+  row: { product_slug: unknown; status: unknown; created_at: string },
+  appIds: Record<EntitlementAlias, string[]>,
+  links: Map<string, string>,
+) {
+  const done = row.status === 'DONE';
   return Promise.all(
-    slugIds(productSlug).map(async (id): Promise<MyOrderItem> => {
+    slugIds(row.product_slug).map(async (id): Promise<MyOrderItem> => {
+      const base = { productId: id, href: null, files: [], downloadUntil: null, downloadOpen: false, link: null };
       const alias = (Object.keys(appIds) as EntitlementAlias[]).find((a) => appIds[a].includes(id));
-      if (alias) return APP_LINKS[alias];
+      if (alias) return { ...base, ...APP_LINKS[alias] };
       const product = await getPurchasable(id);
-      return { title: product?.title ?? '삭제된 상품', href: null };
+      const files = paidFilesFor(id);
+      const until = done && files.length ? downloadUntil(row.created_at) : null;
+      return {
+        ...base,
+        title: product?.title ?? '삭제된 상품',
+        files: done ? files.map(({ key, label }) => ({ key, label })) : [],
+        downloadUntil: until?.toISOString() ?? null,
+        downloadOpen: !!until && until.getTime() > Date.now(),
+        link: done ? (links.get(id) ?? null) : null,
+      };
     }),
   );
 }
 
 export async function getMyPageData(user: User): Promise<MyPageData> {
   const admin = createAdminClient();
-  const [cbt, hangul, appIds, orders] = await Promise.all([
+  const [cbt, hangul, appIds, resources, orders] = await Promise.all([
     getCbtEntitlement(user.id),
     hasHangulEntitlement(user.id),
     entitlementProductIds(),
+    getResourcesCached(),
     admin
       ? admin
           .from('orders')
@@ -79,6 +104,12 @@ export async function getMyPageData(user: User): Promise<MyPageData> {
   ]);
 
   const rows = orders && !orders.error ? (orders.data ?? []) : [];
+  // 유료 자료의 링크URL(Notion) — 산 사람에게만 마이페이지에서 보여 준다.
+  const links = new Map(
+    (resources ?? [])
+      .filter((r) => r.type === 'paid' && r.linkUrl)
+      .map((r) => [r.id, r.linkUrl as string]),
+  );
   const myOrders = await Promise.all(
     rows.map(async (row): Promise<MyOrder> => ({
       orderId: String(row.order_id),
@@ -86,7 +117,7 @@ export async function getMyPageData(user: User): Promise<MyPageData> {
       amount: Number(row.amount ?? 0),
       status: String(row.status ?? ''),
       createdAt: String(row.created_at),
-      items: await orderItems(row.product_slug, appIds),
+      items: await orderItems(row, appIds, links),
     })),
   );
 

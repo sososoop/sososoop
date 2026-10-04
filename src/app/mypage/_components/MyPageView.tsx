@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import type { MyOrder, MyPageData } from '@/lib/mypage';
+import type { MyOrder, MyOrderItem, MyPageData } from '@/lib/mypage';
 import { formatKoreanDate } from '@/lib/period';
 import { formatDate, formatWon, orderStatus, providerLabel } from '@/app/admin/_components/format';
 
@@ -30,6 +30,67 @@ function PassBadge({ state }: { state: PassCard['state'] }) {
   );
 }
 
+function OrderItemRow({ item }: { item: MyOrderItem }) {
+  if (item.files.length > 0) {
+    const until = item.downloadUntil ? formatKoreanDate(new Date(item.downloadUntil)) : '';
+    return (
+      <li className="text-[13.5px]">
+        <span className="text-ink-muted">{item.title}</span>
+        {item.downloadOpen ? (
+          <>
+            <div className="mt-2 flex flex-col sm:flex-row sm:flex-wrap gap-2">
+              {item.files.map((file) => (
+                <a
+                  key={file.key}
+                  href={`/mypage/download?product=${encodeURIComponent(item.productId)}&file=${encodeURIComponent(file.key)}`}
+                  className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-full bg-primary text-white text-[13px] font-semibold hover:bg-primary-dark transition-colors"
+                >
+                  <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+                    <path d="M10 3a1 1 0 011 1v7.59l2.3-2.3a1 1 0 111.4 1.42l-4 4a1 1 0 01-1.4 0l-4-4a1 1 0 111.4-1.42L9 11.6V4a1 1 0 011-1zM4 15a1 1 0 011 1h10a1 1 0 112 0 2 2 0 01-2 2H5a2 2 0 01-2-2 1 1 0 011-1z" />
+                  </svg>
+                  {file.label} PDF
+                </a>
+              ))}
+            </div>
+            <p className="mt-2 text-[12px] text-ink-light">{until}까지 다시 받을 수 있어요.</p>
+          </>
+        ) : (
+          <p className="mt-1 text-[12.5px] text-ink-light">다시 받을 수 있는 기간({until}까지)이 끝났어요.</p>
+        )}
+      </li>
+    );
+  }
+
+  return (
+    <li className="flex items-center justify-between gap-3 text-[13.5px]">
+      <span className="text-ink-muted">{item.title}</span>
+      {item.href ? (
+        <Link href={item.href} className="text-primary font-semibold whitespace-nowrap hover:underline">
+          바로 가기 →
+        </Link>
+      ) : item.link ? (
+        <a
+          href={item.link}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary font-semibold whitespace-nowrap hover:underline"
+        >
+          열기 →
+        </a>
+      ) : (
+        <a
+          href={KAKAO_CHAT}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-ink-muted whitespace-nowrap underline hover:text-ink"
+        >
+          카카오채널로 받기
+        </a>
+      )}
+    </li>
+  );
+}
+
 function OrderCard({ order }: { order: MyOrder }) {
   const status = orderStatus(order.status);
   const done = order.status === 'DONE';
@@ -47,25 +108,9 @@ function OrderCard({ order }: { order: MyOrder }) {
       </div>
 
       {done && (
-        <ul className="mt-3 pt-3 border-t border-hairline flex flex-col gap-2">
+        <ul className="mt-3 pt-3 border-t border-hairline flex flex-col gap-3">
           {order.items.map((item, i) => (
-            <li key={i} className="flex items-center justify-between gap-3 text-[13.5px]">
-              <span className="text-ink-muted">{item.title}</span>
-              {item.href ? (
-                <Link href={item.href} className="text-primary font-semibold whitespace-nowrap hover:underline">
-                  바로 가기 →
-                </Link>
-              ) : (
-                <a
-                  href={KAKAO_CHAT}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-ink-muted whitespace-nowrap underline hover:text-ink"
-                >
-                  카카오채널로 받기
-                </a>
-              )}
-            </li>
+            <OrderItemRow key={i} item={item} />
           ))}
         </ul>
       )}
@@ -81,7 +126,15 @@ function OrderCard({ order }: { order: MyOrder }) {
   );
 }
 
-export default function MyPageView({ data }: { data: MyPageData }) {
+const DOWNLOAD_NOTICES: Record<string, string> = {
+  notpaid: '결제가 확인된 자료만 받을 수 있어요.',
+  expired: '다시 받을 수 있는 기간이 끝났어요. 필요하면 카카오채널로 문의해 주세요.',
+  notfound: '찾을 수 없는 파일이에요.',
+  error: '파일을 준비하지 못했어요. 잠시 뒤 다시 눌러 주세요.',
+};
+
+export default function MyPageView({ data, download }: { data: MyPageData; download?: string }) {
+  const notice = download ? DOWNLOAD_NOTICES[download] : undefined;
   const provider = providerLabel(data.providers);
 
   const passes: PassCard[] = [
@@ -129,6 +182,12 @@ export default function MyPageView({ data }: { data: MyPageData }) {
     <main className="bg-canvas py-12 px-5 md:px-6 min-h-[70vh]">
       <div className="max-w-[760px] mx-auto flex flex-col gap-10">
         <h1 className="text-[26px] font-bold text-ink">마이페이지</h1>
+
+        {notice && (
+          <p className="-mt-4 rounded-[12px] bg-amber-50 border border-amber-200 px-4 py-3 text-[13.5px] text-amber-800">
+            {notice}
+          </p>
+        )}
 
         {/* 내 정보 */}
         <section>
@@ -209,8 +268,8 @@ export default function MyPageView({ data }: { data: MyPageData }) {
                 <OrderCard key={order.orderId} order={order} />
               ))}
               <p className="text-[12px] text-ink-light leading-relaxed">
-                PDF 자료와 강의는 카카오채널로 보내 드려요. 아직 받지 못했다면 주문번호와 함께 문의해
-                주세요.
+                받기 버튼이 없는 자료·강의는 카카오채널로 보내 드려요. 아직 받지 못했다면 주문번호와 함께
+                문의해 주세요.
               </p>
             </div>
           )}
