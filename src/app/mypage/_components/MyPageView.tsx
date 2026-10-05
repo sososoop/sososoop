@@ -35,7 +35,15 @@ function OrderItemRow({ item }: { item: MyOrderItem }) {
     const until = item.downloadUntil ? formatKoreanDate(new Date(item.downloadUntil)) : '';
     return (
       <li className="text-[13.5px]">
-        <span className="text-ink-muted">{item.title}</span>
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-ink-muted">{item.title}</span>
+          {item.href && (
+            <Link href={item.href} className="text-primary font-semibold whitespace-nowrap hover:underline">
+              바로 가기 →
+            </Link>
+          )}
+        </div>
+        {item.href && <p className="mt-1 text-[12px] text-ink-light">구매 선물 자료</p>}
         {item.downloadOpen ? (
           <>
             <div className="mt-2 flex flex-col sm:flex-row sm:flex-wrap gap-2">

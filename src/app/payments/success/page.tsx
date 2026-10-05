@@ -202,6 +202,11 @@ export default async function PaymentSuccessPage({
             >
               CBT 연습앱 시작하기 →
             </Link>
+            {hasFiles && (
+              <Link href="/mypage" className="text-[13px] text-primary font-semibold underline">
+                구매 선물(기출유형분석 심화판)은 마이페이지에서 받기
+              </Link>
+            )}
             <Link href="/" className="text-[13px] text-ink-muted underline">
               홈으로 돌아가기
             </Link>

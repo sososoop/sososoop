@@ -69,19 +69,23 @@ async function orderItems(
   const done = row.status === 'DONE';
   return Promise.all(
     slugIds(row.product_slug).map(async (id): Promise<MyOrderItem> => {
-      const base = { productId: id, href: null, files: [], downloadUntil: null, downloadOpen: false, link: null };
-      const alias = (Object.keys(appIds) as EntitlementAlias[]).find((a) => appIds[a].includes(id));
-      if (alias) return { ...base, ...APP_LINKS[alias] };
-      const product = await getPurchasable(id);
       const files = paidFilesFor(id);
-      const until = done && files.length ? downloadUntil(row.created_at) : null;
-      return {
-        ...base,
-        title: product?.title ?? '삭제된 상품',
+      const until = done && files.length ? downloadUntil(id, row.created_at) : null;
+      const fileFields = {
         files: done ? files.map(({ key, label }) => ({ key, label })) : [],
         downloadUntil: until?.toISOString() ?? null,
         downloadOpen: !!until && until.getTime() > Date.now(),
+      };
+      const alias = (Object.keys(appIds) as EntitlementAlias[]).find((a) => appIds[a].includes(id));
+      // 이용권(앱 바로 가기)도 선물 파일이 있으면 같이 보여 준다.
+      if (alias) return { productId: id, link: null, ...APP_LINKS[alias], ...fileFields };
+      const product = await getPurchasable(id);
+      return {
+        productId: id,
+        title: product?.title ?? '삭제된 상품',
+        href: null,
         link: done ? (links.get(id) ?? null) : null,
+        ...fileFields,
       };
     }),
   );

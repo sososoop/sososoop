@@ -40,7 +40,7 @@ export async function GET(request: Request) {
   const now = Date.now();
   const paid = (orders ?? []).filter((o) => slugIds(o.product_slug).includes(productId));
   if (paid.length === 0) return back('notpaid');
-  if (!paid.some((o) => downloadUntil(o.created_at).getTime() > now)) return back('expired');
+  if (!paid.some((o) => downloadUntil(productId, o.created_at).getTime() > now)) return back('expired');
 
   const { data: signed, error: signError } = await admin.storage
     .from(PAID_FILES_BUCKET)
