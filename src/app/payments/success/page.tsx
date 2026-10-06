@@ -15,27 +15,65 @@ function one(v: string | string[] | undefined): string {
   return Array.isArray(v) ? (v[0] ?? '') : (v ?? '');
 }
 
-async function confirmPayment(paymentKey: string, orderId: string, amount: number) {
+type TossResult =
+  | { ok: true; data: Record<string, unknown> }
+  // retry: 승인 여부를 확인하지 못함(연결 오류 등) — 쿠폰을 풀지 않고 새로고침으로 다시 확인하게 한다.
+  | { ok: false; message: string; retry?: boolean };
+
+function tossAuth(): string | null {
   const secretKey = process.env.TOSS_SECRET_KEY;
-  if (!secretKey) {
-    return { ok: false as const, message: '서버 결제 설정(시크릿 키)이 없습니다.' };
-  }
   // 토스 인증: Basic base64("시크릿키:") — Workers 환경이라 btoa 사용
-  const auth = btoa(`${secretKey}:`);
-  const res = await fetch('https://api.tosspayments.com/v1/payments/confirm', {
-    method: 'POST',
-    headers: {
-      Authorization: `Basic ${auth}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ paymentKey, orderId, amount }),
-  });
-  const data = (await res.json()) as Record<string, unknown>;
-  if (!res.ok) {
-    return { ok: false as const, message: (data.message as string) || '결제 승인에 실패했습니다.' };
-  }
-  return { ok: true as const, data };
+  return secretKey ? `Basic ${btoa(`${secretKey}:`)}` : null;
 }
+
+// 이미 승인된 결제를 토스에서 다시 조회한다(승인 응답을 못 받았거나 중복 승인 오류일 때).
+async function lookupPayment(paymentKey: string, orderId: string, amount: number): Promise<TossResult> {
+  const auth = tossAuth();
+  if (!auth) return { ok: false, message: '서버 결제 설정(시크릿 키)이 없습니다.' };
+  try {
+    const res = await fetch(`https://api.tosspayments.com/v1/payments/${encodeURIComponent(paymentKey)}`, {
+      headers: { Authorization: auth },
+    });
+    const data = (await res.json()) as Record<string, unknown>;
+    if (!res.ok) return { ok: false, message: '결제 확인이 늦어지고 있어요.', retry: true };
+    const status = String(data.status ?? '');
+    if (data.orderId !== orderId || Number(data.totalAmount) !== amount) {
+      return { ok: false, message: '결제 정보가 주문과 일치하지 않습니다.' };
+    }
+    if (status !== 'DONE' && status !== 'WAITING_FOR_DEPOSIT') {
+      return { ok: false, message: '승인되지 않은 결제입니다.' };
+    }
+    return { ok: true, data };
+  } catch {
+    return { ok: false, message: '결제 확인이 늦어지고 있어요.', retry: true };
+  }
+}
+
+async function confirmPayment(paymentKey: string, orderId: string, amount: number): Promise<TossResult> {
+  const auth = tossAuth();
+  if (!auth) return { ok: false, message: '서버 결제 설정(시크릿 키)이 없습니다.' };
+  let res: Response;
+  let data: Record<string, unknown>;
+  try {
+    res = await fetch('https://api.tosspayments.com/v1/payments/confirm', {
+      method: 'POST',
+      headers: { Authorization: auth, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ paymentKey, orderId, amount }),
+    });
+    data = (await res.json()) as Record<string, unknown>;
+  } catch {
+    // 승인됐는지 모르는 상태 — 토스에 다시 물어본다.
+    return lookupPayment(paymentKey, orderId, amount);
+  }
+  if (res.ok) return { ok: true, data };
+  // 같은 결제를 두 번 승인하려 한 경우(새로고침·동시 요청)나 토스 서버 오류 — 승인됐는지 조회해 이어 간다.
+  if (data.code === 'ALREADY_PROCESSED_PAYMENT' || res.status >= 500) {
+    return lookupPayment(paymentKey, orderId, amount);
+  }
+  return { ok: false, message: (data.message as string) || '결제 승인에 실패했습니다.' };
+}
+
+type SavedOrder = { payment_key: string | null; product_slug: string | null; status: string | null };
 
 export default async function PaymentSuccessPage({
   searchParams,
@@ -46,10 +84,27 @@ export default async function PaymentSuccessPage({
   const paymentKey = one(sp.paymentKey);
   const orderId = one(sp.orderId);
   const amount = Number(one(sp.amount));
+  const admin = createAdminClient();
+
+  // 이미 기록된 주문이면(새로고침·뒤로 가기) 토스 승인을 다시 부르지 않고 기록대로 보여 준다.
+  let saved: SavedOrder | null = null;
+  if (admin && orderId) {
+    const { data } = await admin
+      .from('orders')
+      .select('payment_key, product_slug, status')
+      .eq('order_id', orderId)
+      .maybeSingle();
+    saved = (data as SavedOrder | null) ?? null;
+  }
 
   // 결제한 주문(단일 product 또는 장바구니 items)을 서버에서 다시 해석해 금액을 검증한다.
+  // 기록된 주문이 있으면 그 기록의 상품을 쓴다.
   const productParam = one(sp.product);
-  const ids = productParam ? [productParam] : one(sp.items).split(',').filter(Boolean);
+  const ids = saved?.product_slug
+    ? saved.product_slug.split(',')
+    : productParam
+      ? [productParam]
+      : one(sp.items).split(',').filter(Boolean);
   const order = await resolveOrder(ids);
 
   // 주문에 CBT 이용권이 포함됐으면 결제완료 화면에서 바로 앱으로 갈 버튼을 띄운다.
@@ -66,15 +121,24 @@ export default async function PaymentSuccessPage({
 
   // 쿠폰: 결제 화면과 같은 계산으로 할인 뒤 금액을 다시 구한다.
   const couponCode = normalizeCode(one(sp.coupon));
-  const applied = couponCode && order ? await applyCoupon(order, couponCode, orderId) : null;
+  const applied = !saved && couponCode && order ? await applyCoupon(order, couponCode, orderId) : null;
   const expected = applied?.ok ? applied.total : order?.total;
   // 관리자 테스트 주문: 관리자 세션일 때만 토스 승인 없이 완료로 본다(쿠폰 사용 처리는 실제와 같다).
   const isTest = paymentKey === ADMIN_TEST_PAYMENT_KEY;
 
   // 1) 금액 위변조 검증 — 서버가 계산한 총액과 반드시 일치해야 승인 진행
-  let result: Awaited<ReturnType<typeof confirmPayment>> | { ok: false; message: string };
+  let result: TossResult;
   if (!paymentKey || !orderId || !amount) {
     result = { ok: false, message: '결제 정보가 올바르지 않습니다.' };
+  } else if (saved) {
+    // 이미 처리한 주문 — 같은 결제일 때만 완료로 본다. 쿠폰은 건드리지 않는다.
+    if (saved.payment_key !== paymentKey) {
+      result = { ok: false, message: '결제 정보가 주문과 일치하지 않습니다.' };
+    } else if (saved.status === 'DONE' || saved.status === 'WAITING_FOR_DEPOSIT') {
+      result = { ok: true, data: { status: saved.status } };
+    } else {
+      result = { ok: false, message: '취소된 주문이에요.' };
+    }
   } else if (applied && !applied.ok) {
     result = { ok: false, message: `쿠폰을 확인하지 못해 결제를 진행하지 않았어요. (${applied.message})` };
   } else if (isTest && !isAdmin(user)) {
@@ -87,14 +151,15 @@ export default async function PaymentSuccessPage({
   } else {
     // 2) 서버 승인(관리자 테스트는 토스를 부르지 않는다)
     result = isTest
-      ? { ok: true as const, data: { status: 'DONE' } }
+      ? { ok: true, data: { status: 'DONE' } }
       : await confirmPayment(paymentKey, orderId, amount);
-    if (!result.ok && applied?.ok) await releaseCoupon(applied.coupon.code, orderId);
+    // 승인이 확실히 실패했을 때만 쿠폰을 풀어 준다(확인 못 한 상태면 그대로 두고 새로고침으로 다시 확인).
+    if (!result.ok && !result.retry && applied?.ok) await releaseCoupon(applied.coupon.code, orderId);
   }
 
   // 결제수단에 따라 승인 결과 상태가 다르다.
   // 가상계좌는 즉시 완료가 아니라 '입금 대기(WAITING_FOR_DEPOSIT)' 상태로 승인된다.
-  const confirmed = result.ok ? (result.data as Record<string, unknown>) : null;
+  const confirmed = result.ok ? result.data : null;
   const status = (confirmed?.status as string) || 'DONE';
   const isDeposit = status === 'WAITING_FOR_DEPOSIT';
   const va = confirmed?.virtualAccount as
@@ -104,24 +169,74 @@ export default async function PaymentSuccessPage({
   // 3) 주문 기록 — 로그인 유저와 묶어 service_role로 저장(결제 후 자동 접근의 근거).
   //    세션으로 유저를 파악하고, 삽입은 RLS를 우회하는 admin 클라이언트로 한다
   //    (공개 anon 키로의 가짜 결제 위조 삽입을 막기 위해 orders 테이블엔 클라이언트 정책이 없음).
-  if (result.ok && order) {
-    try {
-      const admin = createAdminClient();
-      if (admin) {
-        await admin.from('orders').insert({
-          order_id: orderId,
-          payment_key: paymentKey,
-          user_id: user?.id ?? null,
-          product_slug: order.items.map((it) => it.id).join(','),
-          order_name: isTest ? `${ADMIN_TEST_ORDER_PREFIX}${order.orderName}` : order.orderName,
-          amount: isTest ? 0 : amount,
-          status,
-          ...(applied?.ok ? { coupon_code: applied.coupon.code, discount: applied.coupon.discount } : {}),
-        });
+  //    결제는 됐는데 기록이 안 되면 이용권이 열리지 않으니, 실패를 숨기지 않고 따로 안내한다.
+  let recordFailed = false;
+  if (result.ok && order && !saved) {
+    if (!admin) {
+      recordFailed = true;
+    } else {
+      const { error } = await admin.from('orders').insert({
+        order_id: orderId,
+        payment_key: paymentKey,
+        user_id: user?.id ?? null,
+        product_slug: order.items.map((it) => it.id).join(','),
+        order_name: isTest ? `${ADMIN_TEST_ORDER_PREFIX}${order.orderName}` : order.orderName,
+        amount: isTest ? 0 : amount,
+        status,
+        ...(applied?.ok ? { coupon_code: applied.coupon.code, discount: applied.coupon.discount } : {}),
+      });
+      // 23505: 같은 주문번호가 이미 있음(동시 요청이 먼저 기록함) — 정상
+      if (error && error.code !== '23505') {
+        recordFailed = true;
+        console.error('[payments/success] 주문 기록 실패', orderId, error.code, error.message);
       }
-    } catch {
-      // no-op
     }
+  }
+
+  if (recordFailed) {
+    return (
+      <main className="min-h-[70vh] flex items-center justify-center px-5 py-12">
+        <div className="w-full max-w-[440px] bg-pearl border border-hairline rounded-[18px] p-8 text-center">
+          <h1 className="text-[19px] font-bold text-ink mb-2">결제는 완료됐지만 주문 기록에 문제가 생겼어요</h1>
+          <p className="text-[14px] text-ink-muted leading-relaxed mb-5">
+            다시 결제하지 마시고, 아래 주문번호와 함께 카카오채널로 알려 주세요. 확인하는 대로 바로 열어 드릴게요.
+          </p>
+          <p className="text-ink font-mono text-[12px] bg-white border border-hairline rounded-[10px] px-3 py-2 mb-6 break-all">
+            {orderId}
+          </p>
+          <a
+            href="http://pf.kakao.com/_gngTX/chat"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block px-6 py-3 rounded-full bg-primary text-white text-[14px] font-medium"
+          >
+            카카오채널로 알리기
+          </a>
+        </div>
+      </main>
+    );
+  }
+
+  if (!result.ok && result.retry) {
+    return (
+      <main className="min-h-[70vh] flex items-center justify-center px-5 py-12">
+        <div className="w-full max-w-[440px] bg-pearl border border-hairline rounded-[18px] p-8 text-center">
+          <h1 className="text-[19px] font-bold text-ink mb-2">결제 확인이 늦어지고 있어요</h1>
+          <p className="text-[14px] text-ink-muted leading-relaxed mb-6">
+            잠시 뒤 이 화면을 새로고침해 주세요. 다시 결제하지 않으셔도 돼요.
+            계속 이 화면이 나오면 주문번호({orderId})와 함께 카카오채널로 알려 주세요.
+          </p>
+          <a
+            href="http://pf.kakao.com/_gngTX/chat"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block px-6 py-3 rounded-full bg-primary text-white text-[14px] font-medium"
+          >
+            카카오채널로 알리기
+          </a>
+        </div>
+      </main>
+    );
   }
 
   if (!result.ok) {
