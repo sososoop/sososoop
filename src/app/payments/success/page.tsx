@@ -4,6 +4,8 @@ import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { paidFilesFor } from '@/lib/paid-files';
 import { applyCoupon, claimCoupon, normalizeCode, releaseCoupon } from '@/lib/coupons';
+import { isAdmin } from '@/lib/admin';
+import { ADMIN_TEST_ORDER_PREFIX, ADMIN_TEST_PAYMENT_KEY } from '@/lib/test-order';
 
 export const dynamic = 'force-dynamic';
 
@@ -66,6 +68,8 @@ export default async function PaymentSuccessPage({
   const couponCode = normalizeCode(one(sp.coupon));
   const applied = couponCode && order ? await applyCoupon(order, couponCode, orderId) : null;
   const expected = applied?.ok ? applied.total : order?.total;
+  // 관리자 테스트 주문: 관리자 세션일 때만 토스 승인 없이 완료로 본다(쿠폰 사용 처리는 실제와 같다).
+  const isTest = paymentKey === ADMIN_TEST_PAYMENT_KEY;
 
   // 1) 금액 위변조 검증 — 서버가 계산한 총액과 반드시 일치해야 승인 진행
   let result: Awaited<ReturnType<typeof confirmPayment>> | { ok: false; message: string };
@@ -73,14 +77,18 @@ export default async function PaymentSuccessPage({
     result = { ok: false, message: '결제 정보가 올바르지 않습니다.' };
   } else if (applied && !applied.ok) {
     result = { ok: false, message: `쿠폰을 확인하지 못해 결제를 진행하지 않았어요. (${applied.message})` };
+  } else if (isTest && !isAdmin(user)) {
+    result = { ok: false, message: '관리자 테스트 주문은 관리자 계정으로만 할 수 있어요.' };
   } else if (!order || expected !== amount) {
     result = { ok: false, message: '결제 금액이 주문 정보와 일치하지 않습니다.' };
   } else if (applied?.ok && !(await claimCoupon(applied.coupon.code, orderId, user?.id ?? null))) {
     // 같은 쿠폰으로 동시에 결제한 경우 — 승인 전에 막는다(청구되지 않음).
     result = { ok: false, message: '이미 사용한 쿠폰이라 결제를 진행하지 않았어요.' };
   } else {
-    // 2) 서버 승인
-    result = await confirmPayment(paymentKey, orderId, amount);
+    // 2) 서버 승인(관리자 테스트는 토스를 부르지 않는다)
+    result = isTest
+      ? { ok: true as const, data: { status: 'DONE' } }
+      : await confirmPayment(paymentKey, orderId, amount);
     if (!result.ok && applied?.ok) await releaseCoupon(applied.coupon.code, orderId);
   }
 
@@ -105,8 +113,8 @@ export default async function PaymentSuccessPage({
           payment_key: paymentKey,
           user_id: user?.id ?? null,
           product_slug: order.items.map((it) => it.id).join(','),
-          order_name: order.orderName,
-          amount,
+          order_name: isTest ? `${ADMIN_TEST_ORDER_PREFIX}${order.orderName}` : order.orderName,
+          amount: isTest ? 0 : amount,
           status,
           ...(applied?.ok ? { coupon_code: applied.coupon.code, discount: applied.coupon.discount } : {}),
         });
@@ -189,6 +197,12 @@ export default async function PaymentSuccessPage({
   return (
     <main className="min-h-[70vh] flex items-center justify-center px-5 py-12">
       <div className="w-full max-w-[440px] bg-pearl border border-hairline rounded-[18px] p-8 text-center">
+        {isTest && (
+          <p className="mb-4 px-3 py-2 rounded-[10px] bg-ink text-white text-[12.5px] leading-relaxed">
+            관리자 테스트 주문이에요. 실제 결제는 되지 않았고 주문은 0원으로 기록됐어요.
+            확인이 끝나면 관리자 회원 화면에서 이 주문을 취소해 주세요.
+          </p>
+        )}
         <h1 className="text-[20px] font-bold text-ink mb-2">결제가 완료되었어요</h1>
         <p className="text-[14px] text-ink-muted leading-relaxed mb-6">
           {order?.orderName} 구매가 정상 처리되었습니다.

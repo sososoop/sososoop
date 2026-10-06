@@ -3,6 +3,7 @@ import { getAdminUser } from '@/lib/admin';
 import { createAdminClient } from '@/lib/supabase/admin';
 import ServiceKeyMissing from '../_components/ServiceKeyMissing';
 import { formatDateTime } from '../_components/format';
+import { createTestCoupon } from '../actions';
 
 type CouponRow = {
   code: string;
@@ -49,6 +50,19 @@ export default async function AdminCouponsPage({
       {error && (
         <p className="mb-4 text-[13px] text-red-600">쿠폰 표를 읽지 못했어요. db/coupons.sql 을 실행했는지 확인해 주세요.</p>
       )}
+
+      <form action={createTestCoupon} className="flex flex-wrap items-center gap-2 mb-5 px-4 py-3 rounded-xl border border-dashed border-hairline bg-pearl">
+        <span className="text-[13px] text-ink-muted mr-1">
+          관리자 테스트용 쿠폰 · 결제 화면의 &lsquo;관리자 테스트 주문&rsquo;과 함께 쓰면 실제 결제 없이 확인할 수 있어요.
+        </span>
+        <select name="percent" defaultValue="20" className="px-3 py-2 rounded-lg border border-hairline bg-white text-[13px]">
+          <option value="10">10%</option>
+          <option value="20">20%</option>
+          <option value="30">30%</option>
+          <option value="50">50%</option>
+        </select>
+        <button className="px-4 py-2 rounded-lg bg-ink text-white text-[13px]">테스트 쿠폰 만들기</button>
+      </form>
 
       <form className="flex flex-wrap gap-2 mb-4">
         <input

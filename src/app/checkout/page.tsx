@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { periodLabelFor, resolveOrder } from '@/lib/products';
 import { createClient } from '@/lib/supabase/server';
 import { applyCoupon } from '@/lib/coupons';
+import { isAdmin } from '@/lib/admin';
 import CheckoutClient from './CheckoutClient';
 
 // 로그인 세션을 매 요청 확인해야 하므로 정적 캐시하지 않는다.
@@ -59,6 +60,7 @@ export default async function CheckoutPage({
       coupon={applied?.ok ? applied.coupon : null}
       couponError={applied && !applied.ok ? applied.message : ''}
       couponInput={coupon ?? ''}
+      adminTest={isAdmin(user)}
       order={{
         orderName: order.orderName,
         amount: applied?.ok ? applied.total : order.total,

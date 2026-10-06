@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { loadTossPayments, ANONYMOUS } from '@tosspayments/tosspayments-sdk';
+import { ADMIN_TEST_PAYMENT_KEY } from '@/lib/test-order';
 
 const CLIENT_KEY = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY;
 
@@ -35,12 +36,14 @@ export default function CheckoutClient({
   coupon,
   couponError,
   couponInput,
+  adminTest,
 }: {
   order: Order;
   baseQuery: string; // 쿠폰을 뺀 주문 쿼리
   coupon: Coupon | null;
   couponError: string;
   couponInput: string;
+  adminTest: boolean; // 관리자 로그인이면 실제 결제 없이 완료 화면으로 가는 테스트 버튼을 보여 준다
 }) {
   const router = useRouter();
   const [code, setCode] = useState(coupon?.code ?? couponInput);
@@ -61,6 +64,13 @@ export default function CheckoutClient({
   function removeCode() {
     setCode('');
     router.replace(`/checkout?${baseQuery}`, { scroll: false });
+  }
+
+  // 관리자 테스트: 토스 결제창 대신 결제 완료 화면으로 바로 보낸다(서버가 관리자 세션을 다시 확인).
+  function handleAdminTest() {
+    const orderId = `sososoop-test-${crypto.randomUUID()}`.slice(0, 64);
+    const params = `paymentKey=${ADMIN_TEST_PAYMENT_KEY}&orderId=${orderId}&amount=${order.amount}`;
+    window.location.href = `/payments/success?${order.query}&${params}`;
   }
 
   async function handlePay() {
@@ -231,6 +241,22 @@ export default function CheckoutClient({
         >
           {loading ? '결제창을 여는 중…' : `${order.amount.toLocaleString()}원 결제하기`}
         </button>
+
+        {adminTest && (
+          <div className="mt-4 px-4 py-3.5 rounded-[14px] border border-dashed border-ink-muted/50 bg-white">
+            <p className="text-[12.5px] text-ink-muted leading-relaxed mb-2.5">
+              관리자 전용 · 실제 결제 없이 쿠폰 사용, 주문 기록, 마이페이지 선물 받기까지 확인합니다.
+              주문은 0원으로 기록되고, 쿠폰은 실제처럼 사용 처리돼요.
+            </p>
+            <button
+              type="button"
+              onClick={handleAdminTest}
+              className="w-full py-2.5 rounded-full bg-ink text-white text-[14px] font-semibold"
+            >
+              관리자 테스트 주문 ({order.amount.toLocaleString()}원으로 가정)
+            </button>
+          </div>
+        )}
 
         <p className="text-[11.5px] text-ink-light leading-relaxed mt-4 text-center">
           결제하기를 누르면 주문 내용과{' '}

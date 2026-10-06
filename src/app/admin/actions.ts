@@ -111,3 +111,28 @@ export async function changeOrderStatus(formData: FormData) {
   if (error) throw new Error(`주문 상태 변경 실패: ${error.message}`);
   refresh(userId);
 }
+
+// 테스트 쿠폰 만들기 — 관리자 테스트 주문으로 쿠폰 적용·사용 처리를 확인할 때 쓴다.
+// 헷갈리는 글자(0·O·1·I·L)를 뺀 8자리. 구분은 '테스트'로 남겨 실제 발송 쿠폰과 구별한다.
+const COUPON_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+
+export async function createTestCoupon(formData: FormData) {
+  const db = await adminDb();
+  const admin = await getAdminUser();
+  const percent = Number(formData.get('percent'));
+  if (!Number.isInteger(percent) || percent < 1 || percent > 99) throw new Error('할인율은 1~99%로 정해 주세요.');
+
+  const pick = () =>
+    Array.from(crypto.getRandomValues(new Uint32Array(4)), (n) => COUPON_CHARS[n % COUPON_CHARS.length]).join('');
+  const code = `TEST-${pick()}-${pick()}`;
+  const { error } = await db.from('coupons').insert({
+    code,
+    product: 'cbt',
+    percent,
+    name: '관리자 테스트',
+    email: admin?.email ?? null,
+    grp: '테스트',
+  });
+  if (error) throw new Error(`테스트 쿠폰 만들기 실패: ${error.message}`);
+  revalidatePath('/admin/coupons');
+}
