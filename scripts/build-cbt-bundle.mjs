@@ -71,6 +71,27 @@ html = html.replace(
 );
 if (html === before) throw new Error('questions.js <script> 태그를 찾지 못함 — index.html 구조 확인 필요');
 
+// 2-a) 상세해설(details.js) 인라인 — 공개 회차 문항의 것만 싣는다(키 = 급수-회차-교시-번호)
+{
+  let detailsSrc = '';
+  try { detailsSrc = readFileSync(join(SRC_DIR, 'details.js'), 'utf8'); } catch { /* 없으면 상세해설 없이 */ }
+  const dBox = { window: {} };
+  if (detailsSrc) vm.runInNewContext(detailsSrc, dBox);
+  const all = dBox.window.DETAILS || {};
+  const kept = {};
+  for (const [k, v] of Object.entries(all)) {
+    const [g, s] = k.split('-').map(Number);
+    if (publicKeys.has(`${g}-${s}`) && !isHidden({ grade: g, set: s })) kept[k] = v;
+  }
+  const beforeD = html;
+  html = html.replace(
+    /<script\s+src="details\.js"><\/script>/,
+    `<script>\nwindow.DETAILS = ${JSON.stringify(kept)};\n</script>`,
+  );
+  if (html === beforeD) throw new Error('details.js <script> 태그를 찾지 못함 — index.html 구조 확인 필요');
+  console.log(`상세해설: ${Object.keys(kept).length}문항 실음 (전체 ${Object.keys(all).length})`);
+}
+
 // 2-b) 정식판 전용 대문(시험일정·주의사항) 켜기 — 베타·체험판은 이 플래그가 없어 바로 응시 정보 입력으로 간다
 const beforeHome = html;
 html = html.replace('</head>', '<script>window.SHOW_HOME = true;</script>\n</head>');
