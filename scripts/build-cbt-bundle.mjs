@@ -36,6 +36,7 @@ const isHidden = (q) => hidden.some((h) => h.grade === (q.grade || 1) && h.set =
 const PUBLIC_SETS = [
   { grade: 1, set: 1, n: 140 },
   { grade: 1, set: 2, n: 140 },
+  { grade: 1, set: 3, n: 140 },
   { grade: 2, set: 1, n: 150 },
 ];
 const keyOf = (q) => `${q.grade || 1}-${q.set || 1}`;
