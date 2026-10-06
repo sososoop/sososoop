@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { loadTossPayments, ANONYMOUS } from '@tosspayments/tosspayments-sdk';
 
 const CLIENT_KEY = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY;
@@ -10,8 +11,10 @@ type Order = {
   orderName: string;
   amount: number;
   lines: { title: string; amount: number; period: string }[];
-  query: string; // successUrl/failUrl에 붙일 주문 식별 쿼리 (product=.. 또는 items=..)
+  query: string; // successUrl/failUrl에 붙일 주문 식별 쿼리 (product=.. 또는 items=.., 쿠폰 포함)
 };
+
+type Coupon = { code: string; percent: number; discount: number; itemTitle: string };
 
 // 토스에서 활성화한 결제수단만 노출한다(카드·간편결제 / 계좌이체).
 // 미신청 수단(가상계좌·휴대폰)은 고르면 토스 창에서 에러가 나므로 숨김.
@@ -26,10 +29,39 @@ const METHODS: { key: MethodKey; label: string; desc: string }[] = [
   { key: 'TRANSFER', label: '계좌이체', desc: '은행 계좌에서 바로 이체' },
 ];
 
-export default function CheckoutClient({ order }: { order: Order }) {
+export default function CheckoutClient({
+  order,
+  baseQuery,
+  coupon,
+  couponError,
+  couponInput,
+}: {
+  order: Order;
+  baseQuery: string; // 쿠폰을 뺀 주문 쿼리
+  coupon: Coupon | null;
+  couponError: string;
+  couponInput: string;
+}) {
+  const router = useRouter();
+  const [code, setCode] = useState(coupon?.code ?? couponInput);
+  const [applying, startApply] = useTransition();
   const [selected, setSelected] = useState<MethodKey>('CARD');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // 쿠폰 적용·해제는 같은 결제 화면을 다시 불러 서버가 금액을 계산하게 한다.
+  function applyCode() {
+    const c = code.trim();
+    if (!c) return;
+    startApply(() => {
+      router.replace(`/checkout?${baseQuery}&coupon=${encodeURIComponent(c)}`, { scroll: false });
+    });
+  }
+
+  function removeCode() {
+    setCode('');
+    router.replace(`/checkout?${baseQuery}`, { scroll: false });
+  }
 
   async function handlePay() {
     setError('');
@@ -99,6 +131,17 @@ export default function CheckoutClient({ order }: { order: Order }) {
               </span>
             </div>
           ))}
+          {coupon && (
+            <div className="flex items-start justify-between gap-4 border-t border-hairline pt-2.5 mt-1">
+              <span className="text-[13.5px] text-primary leading-snug">
+                쿠폰 할인 {coupon.percent}%
+                <span className="block text-[12px] text-ink-muted mt-0.5">{coupon.itemTitle}</span>
+              </span>
+              <span className="text-[14.5px] text-primary font-semibold whitespace-nowrap">
+                −{coupon.discount.toLocaleString()}원
+              </span>
+            </div>
+          )}
           <div className="flex items-baseline justify-between border-t border-hairline pt-3 mt-2">
             <span className="text-[13px] text-ink-muted">
               총 결제금액 ({order.lines.length}개)
@@ -108,6 +151,44 @@ export default function CheckoutClient({ order }: { order: Order }) {
             </span>
           </div>
         </div>
+
+        {/* 쿠폰 */}
+        <p className="text-[13px] font-semibold text-ink mb-2.5 px-1">쿠폰</p>
+        {coupon ? (
+          <div className="flex items-center justify-between gap-3 mb-5 px-4 py-3 rounded-[14px] border border-primary bg-primary/5">
+            <span className="text-[14px] text-ink">
+              <span className="font-mono font-semibold">{coupon.code}</span>
+              <span className="text-ink-muted"> · {coupon.percent}% 할인 적용됨</span>
+            </span>
+            <button type="button" onClick={removeCode} className="text-[12.5px] text-ink-muted underline shrink-0">
+              빼기
+            </button>
+          </div>
+        ) : (
+          <div className="mb-5">
+            <div className="flex gap-2">
+              <input
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && applyCode()}
+                placeholder="쿠폰 코드 입력"
+                autoCapitalize="characters"
+                className="flex-1 min-w-0 px-4 py-3 rounded-[14px] border border-hairline bg-pearl text-[14.5px] font-mono uppercase outline-none focus:border-primary"
+              />
+              <button
+                type="button"
+                onClick={applyCode}
+                disabled={!code.trim() || applying}
+                className="shrink-0 px-5 rounded-[14px] bg-ink text-white text-[14px] font-semibold disabled:opacity-40"
+              >
+                {applying ? '확인 중…' : '적용'}
+              </button>
+            </div>
+            {couponError && !applying && (
+              <p className="text-[12.5px] text-red-600 mt-2 px-1">{couponError}</p>
+            )}
+          </div>
+        )}
 
         {/* 결제수단 선택 */}
         <p className="text-[13px] font-semibold text-ink mb-2.5 px-1">결제수단</p>

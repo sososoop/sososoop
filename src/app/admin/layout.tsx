@@ -24,6 +24,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             <Link href="/admin" className="text-ink-muted hover:text-primary transition-colors">
               회원관리
             </Link>
+            <Link href="/admin/coupons" className="text-ink-muted hover:text-primary transition-colors">
+              쿠폰
+            </Link>
           </nav>
           <span className="ml-auto text-[12px] text-ink-light">{admin.email}</span>
         </div>

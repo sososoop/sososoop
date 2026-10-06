@@ -3,6 +3,7 @@ import { resolveOrder, getPurchasable } from '@/lib/products';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { paidFilesFor } from '@/lib/paid-files';
+import { applyCoupon, claimCoupon, normalizeCode, releaseCoupon } from '@/lib/coupons';
 
 export const dynamic = 'force-dynamic';
 
@@ -55,15 +56,32 @@ export default async function PaymentSuccessPage({
   // PDF 자료가 들어 있으면 마이페이지에서 받도록 안내한다.
   const hasFiles = !!order && order.items.some((it) => paidFilesFor(it.id).length > 0);
 
+  // 로그인 유저(주문·쿠폰 기록용)
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  // 쿠폰: 결제 화면과 같은 계산으로 할인 뒤 금액을 다시 구한다.
+  const couponCode = normalizeCode(one(sp.coupon));
+  const applied = couponCode && order ? await applyCoupon(order, couponCode, orderId) : null;
+  const expected = applied?.ok ? applied.total : order?.total;
+
   // 1) 금액 위변조 검증 — 서버가 계산한 총액과 반드시 일치해야 승인 진행
   let result: Awaited<ReturnType<typeof confirmPayment>> | { ok: false; message: string };
   if (!paymentKey || !orderId || !amount) {
     result = { ok: false, message: '결제 정보가 올바르지 않습니다.' };
-  } else if (!order || order.total !== amount) {
+  } else if (applied && !applied.ok) {
+    result = { ok: false, message: `쿠폰을 확인하지 못해 결제를 진행하지 않았어요. (${applied.message})` };
+  } else if (!order || expected !== amount) {
     result = { ok: false, message: '결제 금액이 주문 정보와 일치하지 않습니다.' };
+  } else if (applied?.ok && !(await claimCoupon(applied.coupon.code, orderId, user?.id ?? null))) {
+    // 같은 쿠폰으로 동시에 결제한 경우 — 승인 전에 막는다(청구되지 않음).
+    result = { ok: false, message: '이미 사용한 쿠폰이라 결제를 진행하지 않았어요.' };
   } else {
     // 2) 서버 승인
     result = await confirmPayment(paymentKey, orderId, amount);
+    if (!result.ok && applied?.ok) await releaseCoupon(applied.coupon.code, orderId);
   }
 
   // 결제수단에 따라 승인 결과 상태가 다르다.
@@ -80,10 +98,6 @@ export default async function PaymentSuccessPage({
   //    (공개 anon 키로의 가짜 결제 위조 삽입을 막기 위해 orders 테이블엔 클라이언트 정책이 없음).
   if (result.ok && order) {
     try {
-      const supabase = await createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
       const admin = createAdminClient();
       if (admin) {
         await admin.from('orders').insert({
@@ -94,6 +108,7 @@ export default async function PaymentSuccessPage({
           order_name: order.orderName,
           amount,
           status,
+          ...(applied?.ok ? { coupon_code: applied.coupon.code, discount: applied.coupon.discount } : {}),
         });
       }
     } catch {

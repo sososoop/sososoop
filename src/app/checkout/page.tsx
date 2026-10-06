@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { periodLabelFor, resolveOrder } from '@/lib/products';
 import { createClient } from '@/lib/supabase/server';
+import { applyCoupon } from '@/lib/coupons';
 import CheckoutClient from './CheckoutClient';
 
 // 로그인 세션을 매 요청 확인해야 하므로 정적 캐시하지 않는다.
@@ -10,9 +11,9 @@ export const dynamic = 'force-dynamic';
 export default async function CheckoutPage({
   searchParams,
 }: {
-  searchParams: Promise<{ product?: string; items?: string }>;
+  searchParams: Promise<{ product?: string; items?: string; coupon?: string }>;
 }) {
-  const { product, items } = await searchParams;
+  const { product, items, coupon } = await searchParams;
 
   // 구매 내역을 소소숲 계정과 묶어야 결제 후 자동 접근이 되므로, 결제 전 로그인 필수.
   const supabase = await createClient();
@@ -20,9 +21,11 @@ export default async function CheckoutPage({
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    const back = product
-      ? `/checkout?product=${encodeURIComponent(product)}`
-      : `/checkout?items=${encodeURIComponent(items ?? '')}`;
+    const back =
+      (product
+        ? `/checkout?product=${encodeURIComponent(product)}`
+        : `/checkout?items=${encodeURIComponent(items ?? '')}`) +
+      (coupon ? `&coupon=${encodeURIComponent(coupon)}` : '');
     redirect(`/login?next=${encodeURIComponent(back)}`);
   }
 
@@ -46,11 +49,19 @@ export default async function CheckoutPage({
     ? `product=${encodeURIComponent(product)}`
     : `items=${encodeURIComponent(order.items.map((it) => it.id).join(','))}`;
 
+  // 쿠폰: 서버가 할인액을 계산한다. 결제 승인 화면도 같은 계산으로 금액을 다시 확인한다.
+  const applied = coupon ? await applyCoupon(order, coupon) : null;
+  const couponQuery = applied?.ok ? `&coupon=${encodeURIComponent(applied.coupon.code)}` : '';
+
   return (
     <CheckoutClient
+      baseQuery={query}
+      coupon={applied?.ok ? applied.coupon : null}
+      couponError={applied && !applied.ok ? applied.message : ''}
+      couponInput={coupon ?? ''}
       order={{
         orderName: order.orderName,
-        amount: order.total,
+        amount: applied?.ok ? applied.total : order.total,
         lines: await Promise.all(
           order.items.map(async (it) => ({
             title: it.title,
@@ -58,7 +69,7 @@ export default async function CheckoutPage({
             period: await periodLabelFor(it.id),
           })),
         ),
-        query,
+        query: query + couponQuery,
       }}
     />
   );
