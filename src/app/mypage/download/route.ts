@@ -42,17 +42,20 @@ export async function GET(request: Request) {
   if (paid.length === 0) return back('notpaid');
   if (!paid.some((o) => downloadUntil(productId, o.created_at).getTime() > now)) return back('expired');
 
+  // 받을 파일 이름은 직접 붙인다. supabase-js의 download 옵션은 이름을 두 번 인코딩해서
+  // 한글 파일 이름이 '%EC%A0%9C…' 글자 그대로 저장된다.
   const { data: signed, error: signError } = await admin.storage
     .from(PAID_FILES_BUCKET)
-    .createSignedUrl(file.key, SIGNED_URL_SECONDS, { download: file.downloadName });
+    .createSignedUrl(file.key, SIGNED_URL_SECONDS);
   if (signError || !signed) return back('error');
+  const downloadUrl = `${signed.signedUrl}&download=${encodeURIComponent(file.downloadName)}`;
 
   // 기록 실패는 다운로드를 막지 않는다(insert는 에러를 던지지 않고 돌려준다).
   await admin
     .from('download_logs')
     .insert({ user_id: user.id, product_id: productId, file_key: file.key });
 
-  const res = NextResponse.redirect(signed.signedUrl, { status: 302 });
+  const res = NextResponse.redirect(downloadUrl, { status: 302 });
   res.headers.set('Cache-Control', 'no-store');
   return res;
 }
