@@ -3,9 +3,9 @@ import { resolveOrder, getPurchasable } from '@/lib/products';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { paidFilesFor } from '@/lib/paid-files';
-import { applyCoupon, claimCoupon, normalizeCode, releaseCoupon } from '@/lib/coupons';
+import { claimCoupon, releaseCoupon } from '@/lib/coupons';
 import { isAdmin } from '@/lib/admin';
-import { ADMIN_TEST_ORDER_PREFIX, ADMIN_TEST_PAYMENT_KEY } from '@/lib/test-order';
+import { ADMIN_TEST_PAYMENT_KEY } from '@/lib/test-order';
 
 export const dynamic = 'force-dynamic';
 
@@ -73,7 +73,14 @@ async function confirmPayment(paymentKey: string, orderId: string, amount: numbe
   return { ok: false, message: (data.message as string) || '결제 승인에 실패했습니다.' };
 }
 
-type SavedOrder = { payment_key: string | null; product_slug: string | null; status: string | null };
+type SavedOrder = {
+  user_id: string | null;
+  payment_key: string | null;
+  product_slug: string | null;
+  status: string | null;
+  amount: number | null;
+  coupon_code: string | null;
+};
 
 export default async function PaymentSuccessPage({
   searchParams,
@@ -86,26 +93,19 @@ export default async function PaymentSuccessPage({
   const amount = Number(one(sp.amount));
   const admin = createAdminClient();
 
-  // 이미 기록된 주문이면(새로고침·뒤로 가기) 토스 승인을 다시 부르지 않고 기록대로 보여 준다.
+  // 주문은 결제창을 열기 전에 서버가 'READY'로 저장해 둔다(checkout/actions.ts).
+  // 구매자·상품·최종 금액·쿠폰은 주소가 아니라 이 기록을 믿는다.
   let saved: SavedOrder | null = null;
   if (admin && orderId) {
     const { data } = await admin
       .from('orders')
-      .select('payment_key, product_slug, status')
+      .select('user_id, payment_key, product_slug, status, amount, coupon_code')
       .eq('order_id', orderId)
       .maybeSingle();
     saved = (data as SavedOrder | null) ?? null;
   }
 
-  // 결제한 주문(단일 product 또는 장바구니 items)을 서버에서 다시 해석해 금액을 검증한다.
-  // 기록된 주문이 있으면 그 기록의 상품을 쓴다.
-  const productParam = one(sp.product);
-  const ids = saved?.product_slug
-    ? saved.product_slug.split(',')
-    : productParam
-      ? [productParam]
-      : one(sp.items).split(',').filter(Boolean);
-  const order = await resolveOrder(ids);
+  const order = saved?.product_slug ? await resolveOrder(saved.product_slug.split(',')) : null;
 
   // 주문에 CBT 이용권이 포함됐으면 결제완료 화면에서 바로 앱으로 갈 버튼을 띄운다.
   const cbt = await getPurchasable('cbt');
@@ -113,48 +113,79 @@ export default async function PaymentSuccessPage({
   // PDF 자료가 들어 있으면 마이페이지에서 받도록 안내한다.
   const hasFiles = !!order && order.items.some((it) => paidFilesFor(it.id).length > 0);
 
-  // 로그인 유저(주문·쿠폰 기록용)
+  // 로그인 유저 — 관리자 테스트 주문 확인용(주문의 구매자는 저장된 기록을 쓴다)
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // 쿠폰: 결제 화면과 같은 계산으로 할인 뒤 금액을 다시 구한다.
-  const couponCode = normalizeCode(one(sp.coupon));
-  const applied = !saved && couponCode && order ? await applyCoupon(order, couponCode, orderId) : null;
-  const expected = applied?.ok ? applied.total : order?.total;
   // 관리자 테스트 주문: 관리자 세션일 때만 토스 승인 없이 완료로 본다(쿠폰 사용 처리는 실제와 같다).
   const isTest = paymentKey === ADMIN_TEST_PAYMENT_KEY;
+  const couponCode = saved?.coupon_code ?? null;
 
-  // 1) 금액 위변조 검증 — 서버가 계산한 총액과 반드시 일치해야 승인 진행
   let result: TossResult;
+  // 결제는 됐는데 기록이 안 되면 이용권이 열리지 않으니, 실패를 숨기지 않고 따로 안내한다.
+  let recordFailed = false;
   if (!paymentKey || !orderId || !amount) {
     result = { ok: false, message: '결제 정보가 올바르지 않습니다.' };
-  } else if (saved) {
-    // 이미 처리한 주문 — 같은 결제일 때만 완료로 본다. 쿠폰은 건드리지 않는다.
-    if (saved.payment_key !== paymentKey) {
-      result = { ok: false, message: '결제 정보가 주문과 일치하지 않습니다.' };
-    } else if (saved.status === 'DONE' || saved.status === 'WAITING_FOR_DEPOSIT') {
-      result = { ok: true, data: { status: saved.status } };
-    } else {
-      result = { ok: false, message: '취소된 주문이에요.' };
-    }
-  } else if (applied && !applied.ok) {
-    result = { ok: false, message: `쿠폰을 확인하지 못해 결제를 진행하지 않았어요. (${applied.message})` };
+  } else if (!admin) {
+    result = { ok: false, message: '결제 확인이 늦어지고 있어요.', retry: true };
+  } else if (!saved) {
+    // 결제창을 열기 전에 저장한 주문이 없다 — 승인하지 않았으니 청구되지 않는다.
+    result = { ok: false, message: '주문 정보를 찾을 수 없어 결제를 진행하지 않았어요. 다시 시도해 주세요.' };
+  } else if (saved.status === 'DONE' || saved.status === 'WAITING_FOR_DEPOSIT') {
+    // 이미 처리한 주문(새로고침·뒤로 가기) — 같은 결제일 때만 완료로 본다. 쿠폰은 건드리지 않는다.
+    result =
+      saved.payment_key === paymentKey
+        ? { ok: true, data: { status: saved.status } }
+        : { ok: false, message: '결제 정보가 주문과 일치하지 않습니다.' };
+  } else if (saved.status !== 'READY') {
+    result = { ok: false, message: '취소된 주문이에요.' };
   } else if (isTest && !isAdmin(user)) {
     result = { ok: false, message: '관리자 테스트 주문은 관리자 계정으로만 할 수 있어요.' };
-  } else if (!order || expected !== amount) {
+  } else if (!order || Number(saved.amount) !== amount) {
+    // 1) 금액 위변조 검증 — 결제 전에 저장한 최종 금액과 반드시 일치해야 승인 진행
     result = { ok: false, message: '결제 금액이 주문 정보와 일치하지 않습니다.' };
-  } else if (applied?.ok && !(await claimCoupon(applied.coupon.code, orderId, user?.id ?? null))) {
+  } else if (couponCode && !(await claimCoupon(couponCode, orderId, saved.user_id))) {
     // 같은 쿠폰으로 동시에 결제한 경우 — 승인 전에 막는다(청구되지 않음).
     result = { ok: false, message: '이미 사용한 쿠폰이라 결제를 진행하지 않았어요.' };
   } else {
     // 2) 서버 승인(관리자 테스트는 토스를 부르지 않는다)
-    result = isTest
-      ? { ok: true, data: { status: 'DONE' } }
-      : await confirmPayment(paymentKey, orderId, amount);
+    result = isTest ? { ok: true, data: { status: 'DONE' } } : await confirmPayment(paymentKey, orderId, amount);
     // 승인이 확실히 실패했을 때만 쿠폰을 풀어 준다(확인 못 한 상태면 그대로 두고 새로고침으로 다시 확인).
-    if (!result.ok && !result.retry && applied?.ok) await releaseCoupon(applied.coupon.code, orderId);
+    if (!result.ok && !result.retry && couponCode) await releaseCoupon(couponCode, orderId);
+
+    // 3) 주문 완료 기록 — 기간은 결제가 승인된 시각부터 센다(created_at을 승인 시각으로 바꿈).
+    if (result.ok) {
+      const approvedAt = String(result.data.approvedAt ?? '') || new Date().toISOString();
+      const done = String(result.data.status ?? '') || 'DONE';
+      const { data: updated, error } = await admin
+        .from('orders')
+        .update({
+          status: done,
+          payment_key: paymentKey,
+          created_at: approvedAt,
+          ...(isTest ? { amount: 0 } : {}),
+        })
+        .eq('order_id', orderId)
+        .eq('status', 'READY')
+        .select('order_id');
+      if (error) {
+        recordFailed = true;
+        console.error('[payments/success] 주문 기록 실패', orderId, error.code, error.message);
+      } else if (!updated || updated.length === 0) {
+        // 동시 요청이 먼저 기록했는지 확인
+        const { data: again } = await admin
+          .from('orders')
+          .select('status, payment_key')
+          .eq('order_id', orderId)
+          .maybeSingle();
+        if (!again || again.payment_key !== paymentKey || again.status === 'READY') {
+          recordFailed = true;
+          console.error('[payments/success] 주문 기록 확인 실패', orderId);
+        }
+      }
+    }
   }
 
   // 결제수단에 따라 승인 결과 상태가 다르다.
@@ -165,33 +196,6 @@ export default async function PaymentSuccessPage({
   const va = confirmed?.virtualAccount as
     | { accountNumber?: string; bank?: string; bankCode?: string; dueDate?: string }
     | undefined;
-
-  // 3) 주문 기록 — 로그인 유저와 묶어 service_role로 저장(결제 후 자동 접근의 근거).
-  //    세션으로 유저를 파악하고, 삽입은 RLS를 우회하는 admin 클라이언트로 한다
-  //    (공개 anon 키로의 가짜 결제 위조 삽입을 막기 위해 orders 테이블엔 클라이언트 정책이 없음).
-  //    결제는 됐는데 기록이 안 되면 이용권이 열리지 않으니, 실패를 숨기지 않고 따로 안내한다.
-  let recordFailed = false;
-  if (result.ok && order && !saved) {
-    if (!admin) {
-      recordFailed = true;
-    } else {
-      const { error } = await admin.from('orders').insert({
-        order_id: orderId,
-        payment_key: paymentKey,
-        user_id: user?.id ?? null,
-        product_slug: order.items.map((it) => it.id).join(','),
-        order_name: isTest ? `${ADMIN_TEST_ORDER_PREFIX}${order.orderName}` : order.orderName,
-        amount: isTest ? 0 : amount,
-        status,
-        ...(applied?.ok ? { coupon_code: applied.coupon.code, discount: applied.coupon.discount } : {}),
-      });
-      // 23505: 같은 주문번호가 이미 있음(동시 요청이 먼저 기록함) — 정상
-      if (error && error.code !== '23505') {
-        recordFailed = true;
-        console.error('[payments/success] 주문 기록 실패', orderId, error.code, error.message);
-      }
-    }
-  }
 
   if (recordFailed) {
     return (

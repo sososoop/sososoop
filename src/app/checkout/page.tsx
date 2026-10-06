@@ -45,14 +45,13 @@ export default async function CheckoutPage({
     );
   }
 
-  // 결제 성공/실패 후 서버가 같은 주문을 재해석해 금액을 검증하도록 쿼리를 그대로 넘긴다.
+  // 쿠폰 적용·해제 때 같은 결제 화면을 다시 부를 주문 쿼리.
   const query = product
     ? `product=${encodeURIComponent(product)}`
     : `items=${encodeURIComponent(order.items.map((it) => it.id).join(','))}`;
 
-  // 쿠폰: 서버가 할인액을 계산한다. 결제 승인 화면도 같은 계산으로 금액을 다시 확인한다.
+  // 쿠폰: 서버가 할인액을 계산한다. 결제 직전 주문을 저장할 때 같은 계산을 한 번 더 한다.
   const applied = coupon ? await applyCoupon(order, coupon) : null;
-  const couponQuery = applied?.ok ? `&coupon=${encodeURIComponent(applied.coupon.code)}` : '';
 
   return (
     <CheckoutClient
@@ -71,7 +70,7 @@ export default async function CheckoutPage({
             period: await periodLabelFor(it.id),
           })),
         ),
-        query: query + couponQuery,
+        ids: order.items.map((it) => it.id),
       }}
     />
   );

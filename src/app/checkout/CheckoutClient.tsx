@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { loadTossPayments, ANONYMOUS } from '@tosspayments/tosspayments-sdk';
 import { ADMIN_TEST_PAYMENT_KEY } from '@/lib/test-order';
+import { prepareOrder } from './actions';
 
 const CLIENT_KEY = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY;
 
@@ -12,7 +13,7 @@ type Order = {
   orderName: string;
   amount: number;
   lines: { title: string; amount: number; period: string }[];
-  query: string; // successUrl/failUrl에 붙일 주문 식별 쿼리 (product=.. 또는 items=.., 쿠폰 포함)
+  ids: string[]; // 주문할 상품 id — 결제 직전에 서버가 이걸로 주문을 다시 만들어 저장한다
 };
 
 type Coupon = { code: string; percent: number; discount: number; itemTitle: string };
@@ -66,11 +67,25 @@ export default function CheckoutClient({
     router.replace(`/checkout?${baseQuery}`, { scroll: false });
   }
 
+  // 결제창을 열기 전에 서버에 주문(구매자·상품·최종 금액·쿠폰)을 먼저 저장한다.
+  async function prepare(adminTest = false) {
+    const prepared = await prepareOrder({ ids: order.ids, coupon: coupon?.code, adminTest });
+    if (!prepared.ok) throw new Error(prepared.message);
+    return prepared;
+  }
+
   // 관리자 테스트: 토스 결제창 대신 결제 완료 화면으로 바로 보낸다(서버가 관리자 세션을 다시 확인).
-  function handleAdminTest() {
-    const orderId = `sososoop-test-${crypto.randomUUID()}`.slice(0, 64);
-    const params = `paymentKey=${ADMIN_TEST_PAYMENT_KEY}&orderId=${orderId}&amount=${order.amount}`;
-    window.location.href = `/payments/success?${order.query}&${params}`;
+  async function handleAdminTest() {
+    setError('');
+    setLoading(true);
+    try {
+      const prepared = await prepare(true);
+      const params = `paymentKey=${ADMIN_TEST_PAYMENT_KEY}&orderId=${prepared.orderId}&amount=${prepared.amount}`;
+      window.location.href = `/payments/success?${params}`;
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : '테스트 주문을 시작하지 못했습니다.');
+      setLoading(false);
+    }
   }
 
   async function handlePay() {
@@ -81,15 +96,15 @@ export default function CheckoutClient({
     }
     setLoading(true);
     try {
+      const prepared = await prepare();
       const tossPayments = await loadTossPayments(CLIENT_KEY);
       const payment = tossPayments.payment({ customerKey: ANONYMOUS });
-      const orderId = `sososoop-${crypto.randomUUID()}`.slice(0, 64);
       const base = {
-        amount: { currency: 'KRW' as const, value: order.amount },
-        orderId,
-        orderName: order.orderName,
-        successUrl: `${window.location.origin}/payments/success?${order.query}`,
-        failUrl: `${window.location.origin}/payments/fail?${order.query}`,
+        amount: { currency: 'KRW' as const, value: prepared.amount },
+        orderId: prepared.orderId,
+        orderName: prepared.orderName,
+        successUrl: `${window.location.origin}/payments/success`,
+        failUrl: `${window.location.origin}/payments/fail`,
       };
 
       if (selected === 'CARD') {

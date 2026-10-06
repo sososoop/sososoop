@@ -152,7 +152,8 @@ export async function listMembers(): Promise<{
   }
 
   const [orders, grants, access, productIds] = await Promise.all([
-    db.from('orders').select('*').order('created_at', { ascending: false }),
+    // 결제창만 열고 나간 주문(READY)은 빼고 본다.
+    db.from('orders').select('*').neq('status', 'READY').order('created_at', { ascending: false }),
     db.from('entitlement_grants').select('*'),
     db.from('cbt_access').select('*'),
     entitlementProductIds(),
@@ -189,7 +190,12 @@ export async function getMemberDetail(userId: string): Promise<MemberDetail | nu
   if (error || !data.user) return null;
 
   const [orders, grants, access, productIds] = await Promise.all([
-    db.from('orders').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
+    db
+      .from('orders')
+      .select('*')
+      .eq('user_id', userId)
+      .neq('status', 'READY')
+      .order('created_at', { ascending: false }),
     db
       .from('entitlement_grants')
       .select('*')

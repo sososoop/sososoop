@@ -103,6 +103,7 @@ export async function getMyPageData(user: User): Promise<MyPageData> {
           .from('orders')
           .select('order_id, product_slug, order_name, amount, status, created_at')
           .eq('user_id', user.id)
+          .neq('status', 'READY') // 결제창만 열고 나간 주문은 빼기
           .order('created_at', { ascending: false })
       : null,
   ]);
