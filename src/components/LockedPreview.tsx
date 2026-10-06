@@ -39,6 +39,8 @@ type Props = {
   expiredOn?: string;
   /** 구매 버튼 아래 이용기간 표기 */
   periodLabel?: string;
+  /** 유료 서비스 안내 아래 한 줄(구매 선물 등) */
+  perk?: string;
 };
 
 export default function LockedPreview({
@@ -55,6 +57,7 @@ export default function LockedPreview({
   state,
   expiredOn,
   periodLabel = SERVICE_PERIOD_LABEL,
+  perk,
 }: Props) {
   const [active, setActive] = useState(0);
   const shot = shots[active];
@@ -104,6 +107,7 @@ export default function LockedPreview({
               🔒 이용권을 구매한 소소숲 회원만 이용할 수 있는 유료 서비스입니다.
             </p>
           )}
+          {perk && <p className="mt-1.5 text-[13px] text-on-dark/70">{perk}</p>}
         </div>
       </section>
 

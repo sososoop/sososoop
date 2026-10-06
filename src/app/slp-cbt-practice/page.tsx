@@ -78,6 +78,7 @@ const FEATURES: PreviewFeature[] = [
 const NOTES = [
   '이용권을 구매한 소소숲 회원만 이용할 수 있습니다.',
   `이용기간은 ${CBT_PERIOD_LABEL}이며, 기간 중 추가되는 문항도 그대로 이용할 수 있습니다. 기간이 끝나면 이용권을 다시 구매해 이어서 쓸 수 있어요.`,
+  '구매 선물로 제14회(2025) 1급·2급 기출유형분석 심화판 PDF를 드려요. 이용기간 동안 마이페이지에서 받을 수 있습니다.',
   '개인 학습용이라 계정당 사용 기기가 제한됩니다. 기기를 바꾸면 고객센터로 문의해 주세요.',
   '오답노트와 응시 기록은 이용하는 기기의 브라우저에 저장됩니다. 기기를 바꾸거나 브라우저 데이터를 지우면 초기화돼요.',
   '문항과 해설은 앱 화면에서만 볼 수 있으며 인쇄·PDF 저장은 지원하지 않습니다. 캡처·공유 등 무단 복제·배포는 이용약관에 따라 금지됩니다.',
@@ -130,6 +131,7 @@ export default async function CbtPracticePage({
         state={!user ? 'anonymous' : expiredOn ? 'expired' : 'unpaid'}
         expiredOn={expiredOn}
         periodLabel={CBT_PERIOD_LABEL}
+        perk="구매하면 제14회(2025) 1급·2급 기출유형분석 심화판 PDF를 선물로 드려요."
         eyebrow="국가시험 대비"
         title="언어재활사 CBT 연습"
         tagline="실제 시험과 동일한 교시 구성·제한시간·화면으로 연습하고, 문항마다 상세한 해설로 복습하는 온라인 모의 CBT입니다."
