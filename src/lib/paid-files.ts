@@ -47,6 +47,11 @@ const CBT_GIFT: PaidFileSet = {
       label: '1급 14회 기출유형분석 심화판',
       downloadName: '제14회_1급_언어재활사_국시_기출유형분석_심화판_소소숲.pdf',
     },
+    {
+      key: 'cbt-gift/gichul-2-14-deluxe.pdf',
+      label: '2급 14회 기출유형분석 심화판',
+      downloadName: '제14회_2급_언어재활사_국시_기출유형분석_심화판_소소숲.pdf',
+    },
   ],
 };
 

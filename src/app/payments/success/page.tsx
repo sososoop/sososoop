@@ -219,7 +219,7 @@ export default async function PaymentSuccessPage({
             </Link>
             {hasFiles && (
               <Link href="/mypage" className="text-[13px] text-primary font-semibold underline">
-                구매 선물(기출유형분석 심화판)은 마이페이지에서 받기
+                구매 선물(1·2급 기출유형분석 심화판)은 마이페이지에서 받기
               </Link>
             )}
             <Link href="/" className="text-[13px] text-ink-muted underline">
