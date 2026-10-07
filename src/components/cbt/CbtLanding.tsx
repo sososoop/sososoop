@@ -4,8 +4,8 @@
 import Link from 'next/link';
 import AddToCartButton from '@/components/AddToCartButton';
 import type { CartItem } from '@/lib/cart';
-import CbtDetailSections, { CBT_TRIAL_URL, CLIPS, daysToExam } from './CbtDetail';
 import AutoVideo from './AutoVideo';
+import CbtDetailSections, { CBT_TRIAL_URL, CLIPS, daysToExam } from './CbtDetail';
 
 type Props = {
   state: 'anonymous' | 'unpaid' | 'expired';
@@ -79,7 +79,8 @@ export default function CbtLanding({ state, expiredOn, periodLabel, perk, notes,
             <p className="mt-1 text-[13px] text-cbt-gray">{perk}</p>
           </div>
           <div>
-            <AutoVideo name={CLIPS.hero.name} width={CLIPS.hero.w} height={CLIPS.hero.h} alt="언어재활사 모의 CBT 시험 화면" />
+            {/* 첫 화면: 화면은 가만히, 그 안의 기능(남은시간·형광펜·줄 긋기·답 고르기)만 움직인다 */}
+            <AutoVideo name={CLIPS.hero.name} width={CLIPS.hero.w} height={CLIPS.hero.h} alt="언어재활사 모의 CBT 시험 화면 — 남은시간, 형광펜, 보기 줄 긋기, 답 고르기" />
           </div>
         </div>
       </section>
