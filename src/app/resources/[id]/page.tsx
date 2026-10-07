@@ -5,7 +5,8 @@ import { freeResources, paidResources, type Resource } from '@/data/resources';
 import { getResourcesCached } from '@/lib/notion';
 import { createClient } from '@/lib/supabase/server';
 import BuyButtons from '@/components/BuyButtons';
-import { periodLabelFor } from '@/lib/products';
+import { isCbtProduct, periodLabelFor } from '@/lib/products';
+import CbtDetailSections from '@/components/cbt/CbtDetail';
 
 // 무료 자료도 로그인 회원에게만 열어주므로 요청마다 세션을 확인한다.
 // (Notion 조회는 getResourcesCached가 60초 캐시)
@@ -46,6 +47,7 @@ export default async function ResourceDetailPage({
 
   const isPaid = resource.type === 'paid' && typeof resource.price === 'number' && resource.price > 0;
   const periodLabel = isPaid ? await periodLabelFor(resource.id) : '';
+  const isCbt = isPaid && (await isCbtProduct(resource.id));
 
   return (
     <main className="bg-canvas py-10 px-6 min-h-[70vh]">
@@ -165,6 +167,12 @@ export default async function ResourceDetailPage({
           <div className="border-b-2 border-ink/80 inline-block pb-2 mb-6">
             <span className="text-[15px] font-bold text-ink">상세정보</span>
           </div>
+
+          {isCbt && (
+            <div className="mb-6 -mx-6 md:mx-0 md:rounded-[18px] overflow-hidden md:border-2 md:border-cbt-ink">
+              <CbtDetailSections checkoutHref="/checkout?product=cbt" price={resource.price as number} />
+            </div>
+          )}
 
           <div className="flex flex-col gap-6">
             <div className="bg-pearl rounded-[18px] p-8 border border-hairline">

@@ -76,6 +76,12 @@ export async function periodLabelFor(rawId: string): Promise<string> {
   return resolveAlias('cbt', paid) === rawId ? CBT_PERIOD_LABEL : SERVICE_PERIOD_LABEL;
 }
 
+// 자료실 상세에서 CBT 이용권 상품인지(상세 섹션을 붙일지) 확인한다.
+export async function isCbtProduct(id: string): Promise<boolean> {
+  const paid = (await loadResources()).filter((r) => r.type === 'paid');
+  return resolveAlias('cbt', paid) === id;
+}
+
 // 이용권 소개 화면의 [장바구니 담기]용. 별칭(cbt·hangul)을 실제 상품 id로 풀어
 // 자료실 상세페이지에서 담은 것과 같은 상품으로 담기게 한다.
 export async function getCartItem(

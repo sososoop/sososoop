@@ -18,6 +18,16 @@
   --color-hairline: #D5CCBC;
   --color-warm-tan: #C8986A;
 
+  /* 모의 CBT 상세페이지 — 앱·인스타 캐러셀과 같은 색 */
+  --color-cbt-paper: #FFFDF7;
+  --color-cbt-ink: #1a1a1a;
+  --color-cbt-mint: #12B5A5;
+  --color-cbt-mint-dark: #0e9488;
+  --color-cbt-mint-soft: #e1f6f2;
+  --color-cbt-pop: #3B5BDB;
+  --color-cbt-red: #e0342a;
+  --color-cbt-gray: #6b7280;
+
   --font-family-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Pretendard', sans-serif;
 }
 
@@ -41,6 +51,20 @@ body {
 
 .animate-marquee {
   animation: marquee 25s linear infinite;
+}
+
+/* 모의 CBT 상세페이지 바탕 모눈 */
+.cbt-grid {
+  background-color: #FFFDF7;
+  background-image:
+    linear-gradient(rgba(26, 26, 26, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(26, 26, 26, 0.05) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+.cbt-mark {
+  background: linear-gradient(transparent 58%, rgba(18, 181, 165, 0.32) 58%);
+  padding: 0 4px;
 }
 
 .animate-marquee:hover {
