@@ -6,6 +6,7 @@ import { revalidatePath } from 'next/cache';
 import { getAdminUser } from '@/lib/admin';
 import { isEntitlementActive, isEntitlementAlias } from '@/lib/entitlements';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { getFreeLive } from '@/data/freeLives';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -135,4 +136,21 @@ export async function createTestCoupon(formData: FormData) {
   });
   if (error) throw new Error(`테스트 쿠폰 만들기 실패: ${error.message}`);
   revalidatePath('/admin/coupons');
+}
+
+// 무료 LIVE ZOOM 링크 저장 — 신청자 마이페이지에만 보인다. 링크를 비우면 '곧 올려 드려요'로 돌아간다.
+export async function setLiveZoom(formData: FormData) {
+  const db = await adminDb();
+  const slug = String(formData.get('slug') ?? '');
+  if (!getFreeLive(slug)) throw new Error('잘못된 LIVE입니다.');
+  const url = String(formData.get('zoomUrl') ?? '').trim().slice(0, 500);
+  if (url && !/^https:\/\/([a-z0-9-]+\.)*zoom\.(us|com)\//i.test(url)) throw new Error('ZOOM 링크(https://….zoom.us/…)를 넣어 주세요.');
+  const note = String(formData.get('zoomNote') ?? '').trim().slice(0, 300) || null;
+
+  const { error } = await db
+    .from('free_live_events')
+    .upsert({ slug, zoom_url: url || null, zoom_note: note, updated_at: new Date().toISOString() });
+  if (error) throw new Error(`ZOOM 링크 저장 실패: ${error.message}`);
+  revalidatePath('/admin/lives');
+  revalidatePath('/mypage');
 }

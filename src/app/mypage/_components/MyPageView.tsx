@@ -134,6 +134,47 @@ function OrderCard({ order }: { order: MyOrder }) {
   );
 }
 
+function LiveCard({ item }: { item: MyPageData['lives'][number] }) {
+  const { live, zoom, over } = item;
+  return (
+    <div className={`bg-pearl border rounded-[14px] p-5 ${over ? 'border-hairline opacity-70' : 'border-primary/40'}`}>
+      <div className="flex items-center justify-between gap-3 mb-1.5">
+        <span className="text-[12.5px] text-ink-light">
+          {live.dateLabel} {live.timeLabel} · {live.place}
+        </span>
+        <span className={`text-[11.5px] font-semibold px-2 py-0.5 rounded-full ${over ? 'bg-stone-100 text-ink-light' : 'bg-primary/10 text-primary'}`}>
+          {over ? '지난 LIVE' : '신청 완료'}
+        </span>
+      </div>
+      <p className="text-[15px] font-semibold text-ink leading-snug">{live.title}</p>
+      {!over &&
+        (zoom.url ? (
+          <div className="mt-3 pt-3 border-t border-hairline">
+            <a
+              href={zoom.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-primary text-white text-[13.5px] font-semibold hover:bg-primary-dark transition-colors"
+            >
+              ZOOM 입장하기 →
+            </a>
+            {zoom.note && <p className="mt-2 text-[12.5px] text-ink-muted whitespace-pre-line">{zoom.note}</p>}
+            <p className="mt-2 text-[12px] text-ink-light">시작 5~10분 전에 미리 들어와 주세요.</p>
+          </div>
+        ) : (
+          <p className="mt-3 pt-3 border-t border-hairline text-[13px] text-ink-muted leading-relaxed">
+            ZOOM 접속 링크는 LIVE 전에 이곳에 올려 드려요.
+          </p>
+        ))}
+      {!over && (
+        <Link href={`/lectures/live/${live.slug}`} className="mt-3 inline-block text-[12.5px] text-ink-light underline hover:text-ink-muted">
+          LIVE 안내 다시 보기
+        </Link>
+      )}
+    </div>
+  );
+}
+
 const DOWNLOAD_NOTICES: Record<string, string> = {
   notpaid: '결제가 확인된 자료만 받을 수 있어요.',
   expired: '다시 받을 수 있는 기간이 끝났어요. 필요하면 카카오채널로 문의해 주세요.',
@@ -227,6 +268,18 @@ export default function MyPageView({ data, download }: { data: MyPageData; downl
             </p>
           </div>
         </section>
+
+        {/* 신청한 무료 LIVE */}
+        {data.lives.length > 0 && (
+          <section id="lives" className="scroll-mt-24">
+            <SectionTitle>신청한 무료 LIVE</SectionTitle>
+            <div className="flex flex-col gap-3">
+              {data.lives.map((item) => (
+                <LiveCard key={item.live.slug} item={item} />
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* 내 이용권 */}
         <section>

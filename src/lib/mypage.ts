@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { getPurchasable } from '@/lib/products';
 import { getResourcesCached } from '@/lib/notion';
 import { downloadUntil, paidFilesFor } from '@/lib/paid-files';
+import { getMyLives, type MyLive } from '@/lib/free-lives';
 import {
   entitlementProductIds,
   getCbtEntitlement,
@@ -43,6 +44,7 @@ export type MyPageData = {
   cbt: EntitlementStatus;
   hangul: boolean;
   orders: MyOrder[];
+  lives: MyLive[]; // 신청한 무료 LIVE(ZOOM 링크 포함)
 };
 
 const APP_LINKS: Record<EntitlementAlias, { title: string; href: string }> = {
@@ -93,7 +95,7 @@ async function orderItems(
 
 export async function getMyPageData(user: User): Promise<MyPageData> {
   const admin = createAdminClient();
-  const [cbt, hangul, appIds, resources, orders] = await Promise.all([
+  const [cbt, hangul, appIds, resources, orders, lives] = await Promise.all([
     getCbtEntitlement(user.id),
     hasHangulEntitlement(user.id),
     entitlementProductIds(),
@@ -106,6 +108,7 @@ export async function getMyPageData(user: User): Promise<MyPageData> {
           .neq('status', 'READY') // 결제창만 열고 나간 주문은 빼기
           .order('created_at', { ascending: false })
       : null,
+    getMyLives(user.id),
   ]);
 
   const rows = orders && !orders.error ? (orders.data ?? []) : [];
@@ -134,5 +137,6 @@ export async function getMyPageData(user: User): Promise<MyPageData> {
     cbt,
     hangul,
     orders: myOrders,
+    lives,
   };
 }
