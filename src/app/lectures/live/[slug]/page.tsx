@@ -166,16 +166,12 @@ export default async function FreeLivePage({ params }: { params: Promise<{ slug:
         </div>
       </section>
 
-      {/* 안내 · 혜택 */}
+      {/* 안내 */}
       <section className="px-6 py-14 md:py-20 border-t-2 border-cbt-ink/10">
-        <div className="max-w-[1120px] mx-auto grid md:grid-cols-3 gap-5">
-          <div className="bg-white border-2 border-cbt-ink p-6">
+        <div className="max-w-[1120px] mx-auto grid md:grid-cols-2 gap-5">
+          <div className="bg-white border-2 border-cbt-ink p-6 shadow-[8px_8px_0_0_#12B5A5]">
             <p className="text-[18px] font-black">📌 솔직하게</p>
             <p className="mt-3 text-[15px] font-semibold leading-relaxed [word-break:keep-all]">{live.notes[0]}</p>
-          </div>
-          <div className="bg-white border-2 border-cbt-ink p-6 shadow-[8px_8px_0_0_#12B5A5]">
-            <p className="text-[18px] font-black">🎁 참석자 전용 혜택</p>
-            <p className="mt-3 text-[15px] font-semibold leading-relaxed [word-break:keep-all]">{live.perk}</p>
           </div>
           <div className="bg-cbt-mint-soft border-[2.5px] border-dashed border-cbt-mint-dark p-6">
             <p className="text-[18px] font-black text-cbt-mint-dark">준비 중 · 오프라인 모의훈련</p>
