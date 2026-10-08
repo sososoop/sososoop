@@ -5,6 +5,7 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import AutoVideo from './AutoVideo';
+import { LiveButton } from './LiveStrip';
 
 export const CBT_TRIAL_URL = 'https://cbt-trial.sososoop.com';
 
@@ -296,6 +297,7 @@ export default function CbtDetailSections({ checkoutHref, price = 14900, extraCt
             >
               이용권 구매하기
             </Link>
+            <LiveButton className="inline-flex items-center px-7 py-3.5 border-2 border-cbt-ink bg-white text-cbt-ink text-[17px] font-black hover:bg-cbt-mint-soft transition-colors active:translate-x-[2px] active:translate-y-[2px]" />
             {extraCta}
           </div>
           <p className="mt-10 text-[22px] md:text-[26px] font-black leading-[1.6]">

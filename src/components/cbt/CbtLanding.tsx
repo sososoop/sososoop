@@ -5,6 +5,7 @@ import Link from 'next/link';
 import AddToCartButton from '@/components/AddToCartButton';
 import type { CartItem } from '@/lib/cart';
 import AutoVideo from './AutoVideo';
+import { LiveStrip } from './LiveStrip';
 import CbtDetailSections, { CBT_TRIAL_URL, CLIPS, daysToExam } from './CbtDetail';
 
 type Props = {
@@ -29,6 +30,7 @@ export default function CbtLanding({ state, expiredOn, periodLabel, perk, notes,
       <section className="cbt-grid px-6 pt-12 pb-14 md:pt-16 md:pb-20 border-b-2 border-cbt-ink">
         <div className="max-w-[1120px] mx-auto grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] gap-10 lg:gap-14 items-center">
           <div>
+            <LiveStrip />
             {dday !== null && (
               <p className="flex items-center gap-3 text-[18px] md:text-[20px] font-extrabold">
                 언어재활사 국가시험
