@@ -44,10 +44,14 @@ export default function LiveApplyForm(p: Props) {
             inputMode="tel"
             autoComplete="tel"
             placeholder="010-1234-5678"
+            aria-describedby="phone-why"
             className={input}
           />
         </div>
       </div>
+      <p id="phone-why" className="-mt-3 text-[13px] text-cbt-gray leading-relaxed [word-break:keep-all]">
+        📱 LIVE를 잊지 않고 들어오실 수 있도록 <strong className="text-cbt-ink">시작 전에 알림 문자</strong>를 보내 드려요.
+      </p>
 
       <fieldset>
         <legend className={label}>준비 중인 시험{req}</legend>

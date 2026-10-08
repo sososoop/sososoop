@@ -80,4 +80,4 @@ export function isLiveOver(live: FreeLive, now = Date.now()): boolean {
 
 // 개인정보 활용 동의 문구(기존 신청서와 같은 구성)
 export const FREE_LIVE_CONSENT =
-  '1. 수집 항목: 이름, 연락처, 이메일 · 2. 수집 목적: LIVE 접속 안내, 강의·프로그램 안내 · 3. 이용 기간: 1년';
+  '1. 수집 항목: 이름, 연락처, 이메일 · 2. 수집 목적: LIVE 접속 안내·알림 문자 발송, 강의·프로그램 안내 · 3. 이용 기간: 1년';
