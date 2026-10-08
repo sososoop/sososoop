@@ -247,7 +247,14 @@ export default function CheckoutClient({
           })}
         </div>
 
-        {error && <p className="text-[13px] text-red-600 mb-3 leading-relaxed px-1">{error}</p>}
+        {/* 임시 안내(2026-10-08~): 토스가 현대카드에 하위몰 등록을 마치기 전까지 현대카드 승인이 거절된다
+            (NOT_REGISTERED_SUBMALL). 등록이 끝나 현대카드 결제가 되면 이 블록을 지운다. */}
+        <p className="text-[12.5px] text-ink-muted leading-relaxed bg-pearl border border-hairline rounded-[12px] px-4 py-3 mb-5">
+          <b className="text-ink">현대카드</b>는 카드사 등록 절차가 진행 중이라 지금 결제가 잠시 안 돼요.
+          다른 카드사 카드나 계좌이체로 결제해 주세요.
+        </p>
+
+        {error &&<p className="text-[13px] text-red-600 mb-3 leading-relaxed px-1">{error}</p>}
 
         <button
           onClick={handlePay}
