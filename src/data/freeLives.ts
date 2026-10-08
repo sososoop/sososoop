@@ -53,7 +53,7 @@ export const FREE_LIVES: FreeLive[] = [
     ],
     offline:
       '혼자 CBT를 연습하는 게 어려운 선생님들을 위한 소수정예 오프라인 CBT 실전 모의훈련도 준비해 보려고 해요. LIVE에서 관심 있는 분들을 먼저 확인한 뒤 일정과 장소를 결정할 예정이에요.',
-    examOptions: ['1급', '2급', '기타'],
+    examOptions: ['1급', '2급'],
     worryOptions: [
       'CBT 화면이 낯설어요',
       '답 수정하다가 실수할까 봐 걱정돼요',
@@ -80,4 +80,4 @@ export function isLiveOver(live: FreeLive, now = Date.now()): boolean {
 
 // 개인정보 활용 동의 문구(기존 신청서와 같은 구성)
 export const FREE_LIVE_CONSENT =
-  '1. 수집 항목: 이름, 연락처, 이메일, 인스타그램 아이디 · 2. 수집 목적: LIVE 접속 안내, 강의·프로그램 안내 · 3. 이용 기간: 1년';
+  '1. 수집 항목: 이름, 연락처, 이메일 · 2. 수집 목적: LIVE 접속 안내, 강의·프로그램 안내 · 3. 이용 기간: 1년';

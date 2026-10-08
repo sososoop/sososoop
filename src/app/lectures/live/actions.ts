@@ -25,9 +25,7 @@ export async function applyFreeLive(_prev: ApplyState, formData: FormData): Prom
 
   const name = text(formData, 'name', 40);
   const phone = text(formData, 'phone', 20).replace(/[^0-9]/g, '');
-  const instagram = text(formData, 'instagram', 40).replace(/^@/, '') || null;
   const examPick = text(formData, 'exam', 20);
-  const examOther = text(formData, 'examOther', 40);
   const worries = formData
     .getAll('worries')
     .map((w) => String(w))
@@ -51,8 +49,7 @@ export async function applyFreeLive(_prev: ApplyState, formData: FormData): Prom
     email: user.email ?? null,
     name,
     phone: phone.replace(/^(\d{3})(\d{3,4})(\d{4})$/, '$1-$2-$3'),
-    instagram,
-    exam: examPick === '기타' ? `기타${examOther ? `: ${examOther}` : ''}` : examPick,
+    exam: examPick,
     worries: worryOther ? [...worries, `기타: ${worryOther}`] : worries,
     question,
     offline_interest: live.offlineOptions.includes(offline) ? offline : null,

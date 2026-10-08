@@ -1,7 +1,7 @@
 'use client';
 
 // 무료 LIVE 신청서. 저장은 서버 액션(applyFreeLive)이 하고, 성공하면 페이지가 '신청 완료'로 바뀐다.
-import { useActionState, useState } from 'react';
+import { useActionState } from 'react';
 import { applyFreeLive, type ApplyState } from '../actions';
 
 type Props = {
@@ -25,7 +25,6 @@ const req = <span className="text-cbt-red ml-0.5">*</span>;
 
 export default function LiveApplyForm(p: Props) {
   const [state, action, pending] = useActionState(applyFreeLive, initial);
-  const [exam, setExam] = useState('');
 
   return (
     <form action={action} className="flex flex-col gap-6">
@@ -50,14 +49,6 @@ export default function LiveApplyForm(p: Props) {
         </div>
       </div>
 
-      <div>
-        <label htmlFor="instagram" className={label}>
-          인스타그램 아이디 <span className="text-[13px] font-semibold text-cbt-gray">(선택)</span>
-        </label>
-        <input id="instagram" name="instagram" maxLength={40} placeholder="@sososoop_notes" className={input} />
-        <p className="mt-1.5 text-[13px] text-cbt-gray">인스타 댓글·DM으로 신청 링크를 받으셨다면 적어 주세요.</p>
-      </div>
-
       <fieldset>
         <legend className={label}>준비 중인 시험{req}</legend>
         <div className="flex flex-wrap gap-2">
@@ -69,7 +60,6 @@ export default function LiveApplyForm(p: Props) {
                 value={o}
                 required
                 className="peer sr-only"
-                onChange={() => setExam(o)}
               />
               <span className="inline-block px-5 py-2.5 border-2 border-cbt-ink bg-white text-[15px] font-bold peer-checked:bg-cbt-ink peer-checked:text-white peer-focus-visible:ring-4 peer-focus-visible:ring-cbt-mint/40">
                 {o}
@@ -77,9 +67,6 @@ export default function LiveApplyForm(p: Props) {
             </label>
           ))}
         </div>
-        {exam === '기타' && (
-          <input name="examOther" maxLength={40} placeholder="어떤 시험인지 적어 주세요" className={`${input} mt-3`} />
-        )}
       </fieldset>
 
       <fieldset>
@@ -126,7 +113,7 @@ export default function LiveApplyForm(p: Props) {
         <label className="flex items-start gap-3 cursor-pointer">
           <input type="checkbox" name="agree" value="yes" required className="mt-1 w-5 h-5 accent-cbt-mint shrink-0" />
           <span className="text-[15px] font-bold">
-            이루다쌤의 개인 정보 활용에 동의합니다.{req}
+            개인 정보 활용에 동의합니다.{req}
             <span className="block mt-1 text-[13px] font-medium text-cbt-gray leading-relaxed">{p.consent}</span>
           </span>
         </label>

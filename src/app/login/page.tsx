@@ -4,6 +4,25 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 
+const NEXT_COOKIE = 'sososoop_next';
+
+// 사이트 안 경로만 허용(오픈 리다이렉트 방지)
+function safeNext(value: string | null): string | null {
+  if (!value || !value.startsWith('/') || value.startsWith('//') || value.startsWith('/login')) return null;
+  return value;
+}
+
+// 헤더의 '로그인'처럼 next 없이 들어온 경우, 직전에 보던 소소숲 페이지로 돌려보낸다.
+function referrerPath(): string | null {
+  try {
+    const ref = new URL(document.referrer);
+    if (ref.origin !== window.location.origin) return null;
+    return safeNext(ref.pathname + ref.search + ref.hash);
+  } catch {
+    return null;
+  }
+}
+
 export default function LoginPage() {
   const [loading, setLoading] = useState<'google' | 'kakao' | null>(null);
   const [hasError, setHasError] = useState(false);
@@ -15,14 +34,18 @@ export default function LoginPage() {
 
   const signIn = async (provider: 'google' | 'kakao') => {
     setLoading(provider);
-    const nextParam = new URLSearchParams(window.location.search).get('next');
-    // 기본은 소소숲 홈으로. 특정 페이지(예: 한글놀이)에서 로그인 유도된 경우엔 그 페이지로 복귀.
-    const next = nextParam && nextParam.startsWith('/') ? nextParam : '/';
+    // 로그인 뒤 돌아갈 곳: ?next= → 없으면 직전에 보던 소소숲 페이지 → 없으면 홈.
+    const next = safeNext(new URLSearchParams(window.location.search).get('next')) ?? referrerPath() ?? '/';
+    // Supabase 허용 주소(…/auth/callback)와 정확히 맞추려고 돌아갈 곳은 주소 대신 10분짜리 쿠키에 담는다.
+    // (주소에 ?next= 를 붙이면 허용 목록과 어긋나 홈으로 떨어질 수 있다)
+    document.cookie = `${NEXT_COOKIE}=${encodeURIComponent(next)}; path=/; max-age=600; samesite=lax${
+      window.location.protocol === 'https:' ? '; secure' : ''
+    }`;
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
-        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
+        redirectTo: `${window.location.origin}/auth/callback`,
       },
     });
     if (error) {

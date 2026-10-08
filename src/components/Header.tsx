@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
@@ -27,6 +28,9 @@ export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [cartN, setCartN] = useState(0);
+  // 로그인 후 지금 보던 페이지로 돌아오게 한다(홈·로그인 화면은 제외).
+  const pathname = usePathname();
+  const loginHref = pathname && pathname !== '/' && !pathname.startsWith('/login') ? `/login?next=${encodeURIComponent(pathname)}` : '/login';
 
   useEffect(() => {
     const update = () => setCartN(cartCount());
@@ -118,7 +122,7 @@ export default function Header() {
             </span>
           ) : (
             <Link
-              href="/login"
+              href={loginHref}
               className="text-[12px] font-semibold text-primary-on-dark hover:text-on-dark transition-colors"
             >
               로그인
@@ -193,7 +197,7 @@ export default function Header() {
             </div>
           ) : (
             <Link
-              href="/login"
+              href={loginHref}
               className="text-sm font-semibold text-primary-on-dark hover:text-on-dark"
               onClick={() => setMenuOpen(false)}
             >
