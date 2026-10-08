@@ -18,7 +18,16 @@ function one(v: string | string[] | undefined): string {
 type TossResult =
   | { ok: true; data: Record<string, unknown> }
   // retry: 승인 여부를 확인하지 못함(연결 오류 등) — 쿠폰을 풀지 않고 새로고침으로 다시 확인하게 한다.
-  | { ok: false; message: string; retry?: boolean };
+  | { ok: false; message: string; retry?: boolean; code?: string };
+
+// 카드사 쪽 사정으로 그 카드만 막힌 경우 — 다른 카드사·간편결제·계좌이체로는 결제된다.
+// (예: 카드사에 소소숲이 PG 하위몰로 아직 등록되지 않음)
+const OTHER_CARD_CODES = new Set([
+  'NOT_REGISTERED_SUBMALL',
+  'INVALID_UNREGISTERED_SUBMALL',
+  'NOT_SUPPORTED_CARD_TYPE',
+  'INVALID_CARD_COMPANY',
+]);
 
 function tossAuth(): string | null {
   const secretKey = process.env.TOSS_SECRET_KEY;
@@ -70,7 +79,11 @@ async function confirmPayment(paymentKey: string, orderId: string, amount: numbe
   if (data.code === 'ALREADY_PROCESSED_PAYMENT' || res.status >= 500) {
     return lookupPayment(paymentKey, orderId, amount);
   }
-  return { ok: false, message: (data.message as string) || '결제 승인에 실패했습니다.' };
+  return {
+    ok: false,
+    message: (data.message as string) || '결제 승인에 실패했습니다.',
+    code: typeof data.code === 'string' ? data.code : undefined,
+  };
 }
 
 type SavedOrder = {
@@ -244,17 +257,51 @@ export default async function PaymentSuccessPage({
   }
 
   if (!result.ok) {
+    const otherCard = !!result.code && OTHER_CARD_CODES.has(result.code);
+    // 같은 상품·쿠폰으로 결제 화면을 다시 연다(쿠폰은 승인 실패 때 이미 풀어 둠).
+    const retryHref = saved?.product_slug
+      ? `/checkout?items=${encodeURIComponent(saved.product_slug)}` +
+        (couponCode ? `&coupon=${encodeURIComponent(couponCode)}` : '')
+      : null;
     return (
       <main className="min-h-[70vh] flex items-center justify-center px-5 py-12">
         <div className="w-full max-w-[440px] bg-pearl border border-hairline rounded-[18px] p-8 text-center">
           <h1 className="text-[19px] font-bold text-ink mb-2">결제를 완료하지 못했어요</h1>
-          <p className="text-[14px] text-ink-muted leading-relaxed mb-6">{result.message}</p>
-          <Link
-            href="/"
-            className="inline-block px-6 py-3 rounded-full bg-primary text-white text-[14px] font-medium"
-          >
-            홈으로 돌아가기
-          </Link>
+          <p className={`text-[14px] text-ink-muted leading-relaxed ${result.code ? 'mb-1' : 'mb-6'}`}>
+            {result.message}
+          </p>
+          {result.code && <p className="text-[12px] text-ink-light mb-6">오류 코드: {result.code}</p>}
+          {otherCard && (
+            <div className="text-left bg-white border border-hairline rounded-[12px] p-4 mb-6 text-[13.5px] text-ink leading-relaxed">
+              <p className="font-semibold mb-1">이 카드사에서는 지금 결제가 되지 않아요</p>
+              <p className="text-ink-muted">
+                같은 카드로 다시 시도해도 같은 오류가 나요. <b className="text-ink">다른 카드사 카드</b>나
+                토스페이·카카오페이 같은 <b className="text-ink">간편결제</b>, 또는{' '}
+                <b className="text-ink">계좌이체</b>로 다시 결제해 주세요.
+              </p>
+              <p className="text-ink-muted mt-2">이번 결제는 승인되지 않아 청구되지 않았어요.</p>
+            </div>
+          )}
+          {otherCard && retryHref && (
+            <Link
+              href={retryHref}
+              className="inline-block w-full px-6 py-3.5 mb-3 rounded-full bg-primary text-white text-[15px] font-semibold hover:bg-primary-dark transition-colors"
+            >
+              다른 결제수단으로 다시 결제하기
+            </Link>
+          )}
+          {otherCard && retryHref ? (
+            <Link href="/" className="block text-[13px] text-ink-muted underline">
+              홈으로 돌아가기
+            </Link>
+          ) : (
+            <Link
+              href="/"
+              className="inline-block px-6 py-3 rounded-full bg-primary text-white text-[14px] font-medium"
+            >
+              홈으로 돌아가기
+            </Link>
+          )}
         </div>
       </main>
     );
