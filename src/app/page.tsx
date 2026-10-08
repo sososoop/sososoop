@@ -1,5 +1,7 @@
 import HeroSlider from '@/components/HeroSlider';
 import SectionCarousel from '@/components/SectionCarousel';
+import LivePopup from '@/components/LivePopup';
+import { FREE_LIVES } from '@/data/freeLives';
 
 import { lectures as staticLectures } from '@/data/lectures';
 import { paidResources } from '@/data/resources';
@@ -55,6 +57,10 @@ export default async function HomePage() {
   return (
     <>
       <HeroSlider />
+      {/* 신청 중인 무료 LIVE 팝업(마감 여부는 브라우저에서 다시 확인) */}
+      <LivePopup
+        lives={FREE_LIVES.map(({ slug, title, startsAt, dateLabel, timeLabel, place, summary }) => ({ slug, title, startsAt, dateLabel, timeLabel, place, summary }))}
+      />
 
       <SectionCarousel
         title="자료실"
