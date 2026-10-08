@@ -14,9 +14,23 @@ export const dynamic = 'force-dynamic';
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const live = getFreeLive((await params).slug);
   if (!live) return {};
+  const title = `${live.title} 신청`;
+  const description = `${live.dateLabel} ${live.timeLabel} · ${live.place} · 참가비 무료 — ${live.summary}`;
+  // 블로그·카톡 링크 카드에 사이트 기본 사진 대신 LIVE 안내 이미지가 뜨도록 한다.
+  const image = { url: `/images/og/live-${live.slug}.jpg`, width: 1200, height: 630, alt: `${live.title} — ${live.dateLabel} ${live.timeLabel}` };
   return {
-    title: `${live.title} 신청`,
-    description: `${live.dateLabel} ${live.timeLabel} · ${live.place} · 참가비 무료 — ${live.summary}`,
+    title,
+    description,
+    openGraph: {
+      type: 'website',
+      locale: 'ko_KR',
+      siteName: '소소숲:지혜의 기록소',
+      url: `/lectures/live/${live.slug}`,
+      title,
+      description,
+      images: [image],
+    },
+    twitter: { card: 'summary_large_image', title, description, images: [image.url] },
   };
 }
 
