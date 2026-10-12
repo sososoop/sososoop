@@ -7,6 +7,7 @@ import type { CartItem } from '@/lib/cart';
 import AutoVideo from './AutoVideo';
 import { LiveStrip } from './LiveStrip';
 import CbtDetailSections, { CBT_TRIAL_URL, CLIPS, daysToExam } from './CbtDetail';
+import CbtFaq from './CbtFaq';
 
 type Props = {
   state: 'anonymous' | 'unpaid' | 'expired';
@@ -129,6 +130,8 @@ export default function CbtLanding({ state, expiredOn, periodLabel, perk, notes,
           </div>
         </div>
       </section>
+
+      <CbtFaq />
     </div>
   );
 }
