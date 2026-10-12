@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getAdminUser } from '@/lib/admin';
+import RefreshSiteButton from './_components/RefreshSiteButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,7 +32,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
               무료 LIVE
             </Link>
           </nav>
-          <span className="ml-auto text-[12px] text-ink-light">{admin.email}</span>
+          <RefreshSiteButton />
+          <span className="text-[12px] text-ink-light">{admin.email}</span>
         </div>
       </div>
       {children}

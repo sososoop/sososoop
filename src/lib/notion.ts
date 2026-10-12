@@ -106,9 +106,13 @@ export async function getResources(): Promise<Resource[] | null> {
 }
 
 // 자료실 페이지는 로그인 여부를 봐야 해서 동적 렌더링이다.
-// 매 요청마다 Notion을 치지 않도록 60초 캐시를 씌운다(기존 revalidate=60과 같은 주기).
+// 매 요청마다 Notion을 치지 않도록 캐시를 씌운다. 시간으로는 만료되지 않고,
+// 관리자 화면 '사이트 새로고침'(NOTION_CACHE_TAG 무효화) 때만 다시 읽는다.
+export const NOTION_CACHE_TAG = 'notion';
+
 export const getResourcesCached = unstable_cache(getResources, ['resources'], {
-  revalidate: 60,
+  revalidate: false,
+  tags: [NOTION_CACHE_TAG],
 });
 
 export async function getLectures(): Promise<Lecture[] | null> {
@@ -187,5 +191,6 @@ export async function getGames(): Promise<Game[] | null> {
 }
 
 export const getGamesCached = unstable_cache(getGames, ['games'], {
-  revalidate: 60,
+  revalidate: false,
+  tags: [NOTION_CACHE_TAG],
 });

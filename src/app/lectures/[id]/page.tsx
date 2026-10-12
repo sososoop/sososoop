@@ -8,7 +8,8 @@ import Link from 'next/link';
 import PurchaseBox from '@/components/PurchaseBox';
 import { SERVICE_PERIOD_LABEL } from '@/lib/period';
 
-export const revalidate = 60;
+// Notion이 바뀌어도 자동으로 다시 만들지 않는다 — 관리자 화면 '사이트 새로고침'을 눌러야 갱신된다(KV 쓰기 절약).
+export const revalidate = false;
 
 export async function generateStaticParams() {
   return staticLectures.map((l) => ({ id: l.id }));

@@ -10,7 +10,8 @@ export const metadata: Metadata = {
     '언어재활사와 교육 전문가를 위한 실전 강의 — AI 활용, 평가보고서 작성, 책 출판, 콘텐츠 제작.',
 };
 
-export const revalidate = 60;
+// Notion 반영은 관리자 화면 '사이트 새로고침'으로. 신청 중 무료 LIVE 목록이 시간에 따라 바뀌어서 1시간마다만 다시 만든다.
+export const revalidate = 3600;
 
 export default async function LecturesPage() {
   const notionLectures = await getLectures();

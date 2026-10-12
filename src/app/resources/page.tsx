@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 };
 
 // 무료 자료 목록은 누구나 보고, 링크·파일은 로그인한 회원에게만 내려 준다.
-// 무료 자료는 Notion 「소소숲 무료 자료」 표, 유료 자료는 「소소숲 자료실」 표에서 읽는다(각 60초 캐시).
+// 무료 자료는 Notion 「소소숲 무료 자료」 표, 유료 자료는 「소소숲 자료실」 표에서 읽는다(캐시 — 관리자 '사이트 새로고침' 때 갱신).
 export const dynamic = 'force-dynamic';
 
 export default async function ResourcesPage({

@@ -19,6 +19,11 @@
 		{
 			"binding": "NEXT_INC_CACHE_KV",
 			"id": "e9361786645a4cc6b87b5b4249d2ce8b"
+		},
+		// 태그 캐시 — '사이트 새로고침' 시각을 기록. 키가 `빌드ID/_N_T_…`라 증분 캐시(incremental-cache/…)와 같은 네임스페이스를 써도 겹치지 않는다.
+		{
+			"binding": "NEXT_TAG_CACHE_KV",
+			"id": "e9361786645a4cc6b87b5b4249d2ce8b"
 		}
 	],
 	"routes": [

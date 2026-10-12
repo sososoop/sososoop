@@ -8,7 +8,8 @@ import { paidResources } from '@/data/resources';
 import { games as staticFree } from '@/data/games';
 import { getResources, getLectures, getGames } from '@/lib/notion';
 
-export const revalidate = 60;
+// Notion이 바뀌어도 자동으로 다시 만들지 않는다 — 관리자 화면 '사이트 새로고침'을 눌러야 갱신된다(KV 쓰기 절약).
+export const revalidate = false;
 
 export default async function HomePage() {
   const [notionResources, notionLectures, notionFree] = await Promise.all([

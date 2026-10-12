@@ -9,7 +9,7 @@ import { isCbtProduct, periodLabelFor } from '@/lib/products';
 import CbtDetailSections from '@/components/cbt/CbtDetail';
 
 // 무료 자료도 로그인 회원에게만 열어주므로 요청마다 세션을 확인한다.
-// (Notion 조회는 getResourcesCached가 60초 캐시)
+// (Notion 조회는 getResourcesCached가 캐시 — 관리자 '사이트 새로고침' 때 갱신)
 export const dynamic = 'force-dynamic';
 
 const staticAll = [...freeResources, ...paidResources];

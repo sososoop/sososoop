@@ -2,11 +2,12 @@
 
 // 관리자 회원관리 액션. 서버 액션은 누구나 POST할 수 있는 입구이므로
 // 매 액션마다 관리자 세션을 다시 확인하고, 입력은 전부 검증한다.
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { getAdminUser } from '@/lib/admin';
 import { isEntitlementActive, isEntitlementAlias } from '@/lib/entitlements';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getFreeLive } from '@/data/freeLives';
+import { NOTION_CACHE_TAG } from '@/lib/notion';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -153,4 +154,13 @@ export async function setLiveZoom(formData: FormData) {
   if (error) throw new Error(`ZOOM 링크 저장 실패: ${error.message}`);
   revalidatePath('/admin/lives');
   revalidatePath('/mypage');
+}
+
+// 사이트 새로고침 — Notion을 고친 뒤 누른다. 페이지·Notion 캐시는 시간으로 만료되지 않으므로
+// 이걸 눌러야 다음 방문 때 Notion에서 다시 읽어 새로 만든다(그 전엔 KV에 쓰지 않음).
+export async function refreshSite(): Promise<{ ok: boolean; message: string }> {
+  if (!(await getAdminUser())) return { ok: false, message: '관리자만 할 수 있는 작업입니다.' };
+  revalidateTag(NOTION_CACHE_TAG, { expire: 0 });
+  revalidatePath('/', 'layout');
+  return { ok: true, message: '새로고침했어요. 1분 안에 사이트에 반영돼요.' };
 }
