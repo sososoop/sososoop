@@ -16,6 +16,10 @@ export type FreeLive = {
   notes: string[]; // 미리 알려 드릴 것
   offline: string;
   surveySlug?: string; // 오프라인 모의훈련 관심자 설문(/survey/<slug>)
+  // 좌석 마감: 이 시각부터 들어온 신청은 '다시보기 신청'(ZOOM 링크 대신 다시보기 링크)
+  seatsClosedAt?: string; // ISO(+09:00)
+  seatsClosedNotice?: string[]; // 좌석 마감 안내(문단)
+  replayUrl?: string; // 다시보기 링크 — 넣으면 신청자 전원 마이페이지에 보인다
   // 신청서 선택지
   examOptions: string[];
   worryOptions: string[];
@@ -55,6 +59,13 @@ export const FREE_LIVES: FreeLive[] = [
     offline:
       '혼자 CBT를 연습하는 게 어려운 선생님들을 위한 소수정예 오프라인 CBT 실전 모의훈련도 준비해 보려고 해요. LIVE에서 관심 있는 분들을 먼저 확인한 뒤 일정과 장소를 결정할 예정이에요.',
     surveySlug: 'offline-cbt',
+    seatsClosedAt: '2026-10-13T17:30:00+09:00',
+    seatsClosedNotice: [
+      '신청이 예상보다 많아 실시간 LIVE 좌석 신청은 마감했어요.',
+      'ZOOM 동시 입장 정원이 100명이라, 기존 신청자분들도 접속 순서에 따라 입장이 어려울 수 있어요.',
+      '대신 아래 신청서를 남겨 주시면 LIVE가 끝난 뒤 마이페이지에서 다시보기 링크를 확인하실 수 있어요.',
+      '실시간 자리가 생기면 따로 안내드릴게요 :)',
+    ],
     examOptions: ['1급', '2급'],
     worryOptions: [
       'CBT 화면이 낯설어요',
@@ -70,9 +81,25 @@ export function getFreeLive(slug: string): FreeLive | undefined {
   return FREE_LIVES.find((l) => l.slug === slug);
 }
 
-// 시작 시각이 지나면 신청을 닫는다.
-export function isLiveOpen(live: FreeLive, now = Date.now()): boolean {
+// 좌석 신청이 마감되어 '다시보기 신청'만 받는 중인지
+export function isSeatsClosed(live: FreeLive, now = Date.now()): boolean {
+  return !!live.seatsClosedAt && now >= new Date(live.seatsClosedAt).getTime();
+}
+
+// 이 신청이 좌석 마감 뒤에 들어온 '다시보기 신청'인지
+export function isReplaySignup(live: FreeLive, createdAt: string): boolean {
+  return !!live.seatsClosedAt && new Date(createdAt).getTime() >= new Date(live.seatsClosedAt).getTime();
+}
+
+// LIVE 시작 전인지(좌석 신청 취소는 시작 전까지만)
+export function isBeforeStart(live: FreeLive, now = Date.now()): boolean {
   return now < new Date(live.startsAt).getTime();
+}
+
+// 시작 시각이 지나면 신청을 닫는다. 다시보기 신청은 시작 뒤 3일까지 받는다.
+export function isLiveOpen(live: FreeLive, now = Date.now()): boolean {
+  const end = new Date(live.startsAt).getTime() + (live.seatsClosedAt ? 3 * 24 * 60 * 60 * 1000 : 0);
+  return now < end;
 }
 
 // LIVE가 끝난 것으로 보는 시각(시작 + 3시간) — 마이페이지에서 '지난 LIVE'로 접는다.

@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { getMyRegistration } from '@/lib/free-lives';
-import { FREE_LIVE_CONSENT, getFreeLive, isLiveOpen } from '@/data/freeLives';
+import { FREE_LIVE_CONSENT, getFreeLive, isBeforeStart, isLiveOpen, isReplaySignup, isSeatsClosed } from '@/data/freeLives';
 import AutoVideo from '@/components/cbt/AutoVideo';
 import LiveApplyForm from './LiveApplyForm';
 import { cancelFreeLive } from '../actions';
@@ -65,6 +65,8 @@ export default async function FreeLivePage({ params }: { params: Promise<{ slug:
   } = await supabase.auth.getUser();
   const registration = user ? await getMyRegistration(live.slug, user.id) : null;
   const open = isLiveOpen(live);
+  const seatsClosed = isSeatsClosed(live);
+  const replay = !!registration && isReplaySignup(live, registration.createdAt);
   const meta = user?.user_metadata ?? {};
   const defaultName = String(meta.name || meta.full_name || meta.nickname || '');
   const here = `/lectures/live/${live.slug}`;
@@ -111,7 +113,7 @@ export default async function FreeLivePage({ params }: { params: Promise<{ slug:
                 href="#apply"
                 className="inline-flex items-center px-7 py-3.5 border-2 border-cbt-ink bg-cbt-mint text-white text-[17px] font-black shadow-[5px_5px_0_0_#1a1a1a] hover:bg-cbt-mint-dark"
               >
-                {registration ? '신청 내역 보기 ↓' : open ? '무료로 신청하기 ↓' : '신청 마감'}
+                {registration ? '신청 내역 보기 ↓' : !open ? '신청 마감' : seatsClosed ? '다시보기 신청하기 ↓' : '무료로 신청하기 ↓'}
               </a>
               <span className="text-[14px] font-bold text-cbt-gray">제14회 국가시험 차석 합격자 · 언어재활사 이승윤</span>
             </div>
@@ -205,11 +207,44 @@ export default async function FreeLivePage({ params }: { params: Promise<{ slug:
       {/* 신청 */}
       <section id="apply" className="px-6 py-14 md:py-20 border-t-2 border-cbt-ink/10 scroll-mt-20">
         <div className="max-w-[760px] mx-auto">
-          <H2 kicker={`${live.dateLabel} ${live.timeLabel} · ${live.place} · 무료`}>{live.title} <Em>신청</Em></H2>
-          <p className="mt-3 text-[15px] font-semibold text-[#3a3a36] [word-break:keep-all]">{live.notes[1]}</p>
+          <H2 kicker={`${live.dateLabel} ${live.timeLabel} · ${live.place} · 무료`}>
+            {live.title} <Em>{seatsClosed ? '다시보기 신청' : '신청'}</Em>
+          </H2>
+          {seatsClosed ? (
+            !registration &&
+            live.seatsClosedNotice && (
+              <div className="mt-6 bg-[#fff6e0] border-2 border-cbt-ink px-5 py-5 md:px-6">
+                <p className="inline-flex items-center gap-2 bg-cbt-ink text-white text-[13px] font-black tracking-[0.06em] px-2.5 py-1">
+                  <span className="w-2 h-2 rounded-full bg-cbt-red" aria-hidden />
+                  LIVE 좌석 마감
+                </p>
+                <div className="mt-3 flex flex-col gap-1.5 text-[15.5px] font-semibold text-[#3a3a36] leading-relaxed [word-break:keep-all]">
+                  {live.seatsClosedNotice.map((t, i) => (
+                    <p key={i} className={i === 0 ? 'text-[17px] font-black text-cbt-ink' : ''}>{t}</p>
+                  ))}
+                </div>
+              </div>
+            )
+          ) : (
+            <p className="mt-3 text-[15px] font-semibold text-[#3a3a36] [word-break:keep-all]">{live.notes[1]}</p>
+          )}
 
           <div className="mt-8 bg-white border-2 border-cbt-ink p-6 md:p-8 shadow-[12px_12px_0_0_#12B5A5]">
-            {registration ? (
+            {registration && replay ? (
+              <div className="text-center py-4">
+                <p className="text-[44px]" aria-hidden>📺</p>
+                <p className="mt-2 text-[24px] font-black">다시보기 신청이 완료되었어요!</p>
+                <p className="mt-3 text-[15px] font-semibold text-[#3a3a36] leading-relaxed [word-break:keep-all]">
+                  {registration.name} 선생님, LIVE가 끝난 뒤 <strong>마이페이지</strong>에서 다시보기 링크를 확인하실 수 있어요.
+                  <br />실시간 자리가 생기면 따로 안내드릴게요.
+                </p>
+                <div className="mt-6 flex flex-wrap justify-center gap-3">
+                  <Link href="/mypage#lives" className="inline-flex items-center px-6 py-3 border-2 border-cbt-ink bg-cbt-pop text-white text-[16px] font-black hover:bg-[#2f49b0]">
+                    마이페이지 보기 →
+                  </Link>
+                </div>
+              </div>
+            ) : registration ? (
               <div className="text-center py-4">
                 <p className="text-[44px]" aria-hidden>🎉</p>
                 <p className="mt-2 text-[24px] font-black">신청이 완료되었어요!</p>
@@ -222,7 +257,7 @@ export default async function FreeLivePage({ params }: { params: Promise<{ slug:
                     마이페이지에서 ZOOM 링크 보기 →
                   </Link>
                 </div>
-                {open && (
+                {isBeforeStart(live) && (
                   <form action={cancelFreeLive} className="mt-6">
                     <input type="hidden" name="slug" value={live.slug} />
                     <button className="text-[13px] text-cbt-gray underline hover:text-cbt-ink">참석이 어려워졌다면 신청 취소하기</button>
@@ -235,7 +270,7 @@ export default async function FreeLivePage({ params }: { params: Promise<{ slug:
               <div className="text-center py-4">
                 <p className="text-[20px] font-black">로그인하고 신청해 주세요</p>
                 <p className="mt-2 text-[15px] font-semibold text-[#3a3a36] leading-relaxed [word-break:keep-all]">
-                  소소숲 계정으로 신청하면, ZOOM 접속 링크를 <strong>마이페이지</strong>에서 바로 확인할 수 있어요.
+                  소소숲 계정으로 신청하면, {seatsClosed ? '다시보기 링크를' : 'ZOOM 접속 링크를'} <strong>마이페이지</strong>에서 바로 확인할 수 있어요.
                 </p>
                 <Link
                   href={`/login?next=${encodeURIComponent(`${here}#apply`)}`}
@@ -256,6 +291,7 @@ export default async function FreeLivePage({ params }: { params: Promise<{ slug:
                 dateLabel={live.dateLabel}
                 timeLabel={live.timeLabel}
                 consent={FREE_LIVE_CONSENT}
+                replay={seatsClosed}
               />
             )}
           </div>

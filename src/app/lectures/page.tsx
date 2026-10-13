@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { lectures as staticLectures } from '@/data/lectures';
 import { getLectures } from '@/lib/notion';
-import { FREE_LIVES, isLiveOpen } from '@/data/freeLives';
+import { FREE_LIVES, isLiveOpen, isSeatsClosed } from '@/data/freeLives';
 
 export const metadata: Metadata = {
   title: '강의 목록',
@@ -51,7 +51,7 @@ export default async function LecturesPage() {
                   {live.dateLabel} {live.timeLabel} · {live.place} · 참가비 무료
                 </p>
               </div>
-              <span className="text-[15px] font-bold text-cbt-pop whitespace-nowrap group-hover:underline">무료 신청하기 →</span>
+              <span className="text-[15px] font-bold text-cbt-pop whitespace-nowrap group-hover:underline">{isSeatsClosed(live) ? '다시보기 신청하기 →' : '무료 신청하기 →'}</span>
             </Link>
           ))}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

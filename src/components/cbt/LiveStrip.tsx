@@ -1,6 +1,6 @@
 // 모의 CBT 화면에 붙이는 '신청 중인 무료 LIVE' 안내(띠·버튼). 신청 기간이 끝나면 저절로 사라진다.
 import Link from 'next/link';
-import { FREE_LIVES, isLiveOpen } from '@/data/freeLives';
+import { FREE_LIVES, isLiveOpen, isSeatsClosed } from '@/data/freeLives';
 
 function openLive() {
   return FREE_LIVES.find((l) => isLiveOpen(l)) ?? null;
@@ -22,7 +22,7 @@ export function LiveStrip() {
       <span className="text-[14.5px] font-extrabold [word-break:keep-all]">
         {live.title.replace(/^언어재활사 /, '')} · {live.dateLabel.replace(/^\d{4}년 /, '')} {live.timeLabel}
       </span>
-      <span className="ml-auto text-[14px] font-black text-cbt-pop group-hover:underline whitespace-nowrap">신청하기 →</span>
+      <span className="ml-auto text-[14px] font-black text-cbt-pop group-hover:underline whitespace-nowrap">{isSeatsClosed(live) ? '다시보기 신청 →' : '신청하기 →'}</span>
     </Link>
   );
 }
@@ -34,7 +34,7 @@ export function LiveButton({ className }: { className: string }) {
   return (
     <Link href={`/lectures/live/${live.slug}`} className={className}>
       <span className="w-2.5 h-2.5 rounded-full bg-cbt-red mr-2 animate-pulse" aria-hidden />
-      무료 LIVE 신청하기
+      {isSeatsClosed(live) ? '무료 LIVE 다시보기 신청' : '무료 LIVE 신청하기'}
     </Link>
   );
 }

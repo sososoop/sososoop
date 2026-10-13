@@ -1,6 +1,6 @@
 // 무료 LIVE 신청·ZOOM 링크 — 서버 전용. 신청 기록과 링크는 service_role 키로만 읽고 쓴다.
 import { createAdminClient } from '@/lib/supabase/admin';
-import { FREE_LIVES, getFreeLive, isLiveOver, type FreeLive } from '@/data/freeLives';
+import { FREE_LIVES, getFreeLive, isLiveOver, isReplaySignup, type FreeLive } from '@/data/freeLives';
 
 export type LiveRegistration = {
   id: string;
@@ -24,6 +24,7 @@ export type LiveZoom = { url: string | null; note: string | null };
 export type MyLive = {
   live: FreeLive;
   over: boolean;
+  replay: boolean; // 좌석 마감 뒤 '다시보기 신청' — ZOOM 링크를 보여 주지 않는다
   zoom: LiveZoom;
 };
 
@@ -83,20 +84,24 @@ export async function getMyLives(userId: string): Promise<MyLive[]> {
   if (!db) return [];
   const { data, error } = await db
     .from('free_live_registrations')
-    .select('event_slug')
+    .select('event_slug, created_at')
     .eq('user_id', userId)
     .is('canceled_at', null);
   if (error) return [];
-  const lives = (data ?? [])
-    .map((r) => getFreeLive(String(r.event_slug)))
-    .filter((l): l is FreeLive => !!l)
-    .sort((a, b) => a.startsAt.localeCompare(b.startsAt));
-  const zooms = await zoomMap(lives.map((l) => l.slug));
-  return lives.map((live) => ({
-    live,
-    over: isLiveOver(live),
-    zoom: zooms.get(live.slug) ?? { url: null, note: null },
-  }));
+  const mine = (data ?? [])
+    .map((r) => ({ live: getFreeLive(String(r.event_slug)), createdAt: String(r.created_at) }))
+    .filter((m): m is { live: FreeLive; createdAt: string } => !!m.live)
+    .sort((a, b) => a.live.startsAt.localeCompare(b.live.startsAt));
+  const zooms = await zoomMap(mine.map((m) => m.live.slug));
+  return mine.map(({ live, createdAt }) => {
+    const replay = isReplaySignup(live, createdAt);
+    return {
+      live,
+      over: isLiveOver(live),
+      replay,
+      zoom: replay ? { url: null, note: null } : zooms.get(live.slug) ?? { url: null, note: null },
+    };
+  });
 }
 
 // 관리자: LIVE별 신청자(취소 포함)와 ZOOM 링크. 표가 없으면 tableReady=false.

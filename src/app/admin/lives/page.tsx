@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { getAdminUser } from '@/lib/admin';
 import { listLiveRegistrations } from '@/lib/free-lives';
+import { isReplaySignup } from '@/data/freeLives';
 import ServiceKeyMissing from '../_components/ServiceKeyMissing';
 import { formatDateTime } from '../_components/format';
 import { setLiveZoom } from '../actions';
@@ -24,6 +25,12 @@ export default async function AdminLivesPage() {
       {result.events.map(({ live, zoom, registrations }) => {
         const active = registrations.filter((r) => !r.canceledAt);
         const canceled = registrations.length - active.length;
+        // 좌석 마감 뒤 신청은 '다시보기'로 따로 센다(ZOOM 링크 문자는 좌석 신청자에게만).
+        const seats = active.filter((r) => !isReplaySignup(live, r.createdAt));
+        const replays = active.filter((r) => isReplaySignup(live, r.createdAt));
+        const copyGroups: [string, typeof active][] = live.seatsClosedAt
+          ? [['좌석 신청자', seats], ['다시보기 신청자', replays]]
+          : [['', active]];
         const count = (pick: (r: (typeof active)[number]) => string | string[] | null) => {
           const m = new Map<string, number>();
           active.forEach((r) => [pick(r) ?? []].flat().forEach((v) => v && m.set(v, (m.get(v) ?? 0) + 1)));
@@ -39,7 +46,9 @@ export default async function AdminLivesPage() {
             <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
               <h2 className="text-[18px] font-bold text-ink">{live.title}</h2>
               <span className="text-[13px] text-ink-muted">
-                {live.dateLabel} {live.timeLabel} · 신청 {active.length}명{canceled ? ` · 취소 ${canceled}명` : ''}
+                {live.dateLabel} {live.timeLabel} · 신청 {active.length}명
+                {live.seatsClosedAt ? ` (좌석 ${seats.length} · 다시보기 ${replays.length})` : ''}
+                {canceled ? ` · 취소 ${canceled}명` : ''}
               </span>
               <Link href={`/lectures/live/${live.slug}`} className="text-[13px] text-primary hover:underline">
                 신청 페이지 →
@@ -89,16 +98,20 @@ export default async function AdminLivesPage() {
               </div>
             )}
 
-            {active.length > 0 && (
-              <details className="text-[13px]">
-                <summary className="cursor-pointer text-ink-muted">연락처 한 번에 복사하기 ({active.length}명)</summary>
-                <textarea
-                  readOnly
-                  rows={4}
-                  className="mt-2 w-full px-3 py-2 rounded-lg border border-hairline bg-white font-mono text-[12px]"
-                  defaultValue={active.map((r) => `${r.name}\t${r.phone}\t${r.email ?? ''}`).join('\n')}
-                />
-              </details>
+            {copyGroups.map(([label, list]) =>
+              list.length > 0 ? (
+                <details key={label} className="text-[13px]">
+                  <summary className="cursor-pointer text-ink-muted">
+                    {label ? `${label} ` : ''}연락처 한 번에 복사하기 ({list.length}명)
+                  </summary>
+                  <textarea
+                    readOnly
+                    rows={4}
+                    className="mt-2 w-full px-3 py-2 rounded-lg border border-hairline bg-white font-mono text-[12px]"
+                    defaultValue={list.map((r) => `${r.name}\t${r.phone}\t${r.email ?? ''}`).join('\n')}
+                  />
+                </details>
+              ) : null,
             )}
 
             <div className="overflow-x-auto bg-white border border-hairline rounded-xl">
@@ -135,6 +148,7 @@ export default async function AdminLivesPage() {
                       <td className="px-4 py-2.5 whitespace-nowrap text-ink-muted">{r.offlineInterest ?? '-'}</td>
                       <td className="px-4 py-2.5 whitespace-nowrap text-ink-muted">
                         {formatDateTime(r.createdAt)}
+                        {isReplaySignup(live, r.createdAt) && <span className="block text-[12px] font-semibold text-primary">다시보기</span>}
                         {r.canceledAt && <span className="block text-[12px] text-red-600">취소 {formatDateTime(r.canceledAt)}</span>}
                       </td>
                     </tr>

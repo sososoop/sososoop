@@ -12,6 +12,7 @@ export type LivePopupItem = {
   timeLabel: string;
   place: string;
   summary: string;
+  seatsClosedAt?: string; // 이 시각부터 '다시보기 신청'으로 안내
 };
 
 const HIDE_KEY = (slug: string) => `sososoop-live-popup-hide:${slug}`;
@@ -26,6 +27,7 @@ function hiddenUntil(slug: string): number {
 
 export default function LivePopup({ lives }: { lives: LivePopupItem[] }) {
   const [live, setLive] = useState<LivePopupItem | null>(null);
+  const [closed, setClosed] = useState(false); // 좌석 마감 → 다시보기 신청 안내
   const cta = useRef<HTMLAnchorElement>(null);
 
   useEffect(() => {
@@ -33,7 +35,10 @@ export default function LivePopup({ lives }: { lives: LivePopupItem[] }) {
     const pick = lives.find((l) => now < new Date(l.startsAt).getTime() && hiddenUntil(l.slug) < now);
     if (!pick) return;
     // 첫 화면이 그려진 뒤 살짝 늦게 띄운다.
-    const t = window.setTimeout(() => setLive(pick), 700);
+    const t = window.setTimeout(() => {
+      setClosed(!!pick.seatsClosedAt && now >= new Date(pick.seatsClosedAt).getTime());
+      setLive(pick);
+    }, 700);
     return () => window.clearTimeout(t);
   }, [lives]);
 
@@ -109,7 +114,7 @@ export default function LivePopup({ lives }: { lives: LivePopupItem[] }) {
             onClick={() => setLive(null)}
             className="mt-5 flex items-center justify-center py-3.5 border-2 border-cbt-ink bg-cbt-mint text-white text-[17px] font-black shadow-[4px_4px_0_0_#1a1a1a] hover:bg-cbt-mint-dark"
           >
-            무료로 신청하기 →
+            {closed ? '좌석 마감 · 다시보기 신청하기 →' : '무료로 신청하기 →'}
           </Link>
           <div className="mt-4 flex justify-between text-[13px] text-cbt-gray">
             <button type="button" onClick={hideToday} className="underline hover:text-cbt-ink">

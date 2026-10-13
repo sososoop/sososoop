@@ -4,7 +4,7 @@
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { getFreeLive, isLiveOpen } from '@/data/freeLives';
+import { getFreeLive, isLiveOpen, isSeatsClosed } from '@/data/freeLives';
 
 export type ApplyState = { ok: boolean; message: string };
 
@@ -37,7 +37,9 @@ export async function applyFreeLive(_prev: ApplyState, formData: FormData): Prom
   if (!name) return { ok: false, message: '이름을 적어 주세요.' };
   if (!/^01[0-9]{8,9}$/.test(phone)) return { ok: false, message: '휴대폰 번호를 다시 확인해 주세요. (예: 010-1234-5678)' };
   if (!live.examOptions.includes(examPick)) return { ok: false, message: '준비 중인 시험을 골라 주세요.' };
-  if (formData.get('attend') !== 'yes') return { ok: false, message: '실시간 참석 여부를 확인해 주세요.' };
+  const replay = isSeatsClosed(live);
+  if (formData.get('attend') !== 'yes')
+    return { ok: false, message: replay ? '다시보기 신청인 것을 확인해 주세요.' : '실시간 참석 여부를 확인해 주세요.' };
   if (formData.get('agree') !== 'yes') return { ok: false, message: '개인정보 활용에 동의해 주세요.' };
 
   const db = createAdminClient();
@@ -55,6 +57,8 @@ export async function applyFreeLive(_prev: ApplyState, formData: FormData): Prom
     offline_interest: live.offlineOptions.includes(offline) ? offline : null,
     agreed_at: new Date().toISOString(),
     canceled_at: null,
+    // 좌석 마감 뒤에는 신청 시각을 새로 찍는다 → 취소했던 좌석을 되살려도 '다시보기 신청'으로 본다.
+    ...(replay ? { created_at: new Date().toISOString() } : {}),
   };
   // 한 사람이 같은 LIVE에 한 번만. 취소했다가 다시 신청하면 같은 행을 되살린다.
   const { error } = await db.from('free_live_registrations').upsert(row, { onConflict: 'event_slug,user_id' });

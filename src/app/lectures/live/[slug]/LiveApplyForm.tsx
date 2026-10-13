@@ -14,6 +14,7 @@ type Props = {
   dateLabel: string;
   timeLabel: string;
   consent: string;
+  replay?: boolean; // 좌석 마감 뒤 '다시보기 신청'
 };
 
 const initial: ApplyState = { ok: false, message: '' };
@@ -50,7 +51,11 @@ export default function LiveApplyForm(p: Props) {
         </div>
       </div>
       <p id="phone-why" className="-mt-3 text-[13px] text-cbt-gray leading-relaxed [word-break:keep-all]">
-        📱 LIVE를 잊지 않고 들어오실 수 있도록 <strong className="text-cbt-ink">시작 전에 알림 문자</strong>를 보내 드려요.
+        {p.replay ? (
+          <>📱 실시간 자리가 생기면 <strong className="text-cbt-ink">문자로 안내</strong>드려요.</>
+        ) : (
+          <>📱 LIVE를 잊지 않고 들어오실 수 있도록 <strong className="text-cbt-ink">시작 전에 알림 문자</strong>를 보내 드려요.</>
+        )}
       </p>
 
       <fieldset>
@@ -111,7 +116,8 @@ export default function LiveApplyForm(p: Props) {
         <label className="flex items-start gap-3 cursor-pointer">
           <input type="checkbox" name="attend" value="yes" required className="mt-1 w-5 h-5 accent-cbt-mint shrink-0" />
           <span className="text-[15px] font-bold">
-            {p.dateLabel} {p.timeLabel}, 실시간으로 참석할게요.{req}
+            {p.replay ? '실시간 좌석이 아닌 다시보기 신청인 것을 확인했어요.' : `${p.dateLabel} ${p.timeLabel}, 실시간으로 참석할게요.`}
+            {req}
           </span>
         </label>
         <label className="flex items-start gap-3 cursor-pointer">
@@ -134,10 +140,10 @@ export default function LiveApplyForm(p: Props) {
         disabled={pending}
         className="w-full py-4 border-2 border-cbt-ink bg-cbt-mint text-white text-[18px] font-black shadow-[6px_6px_0_0_#1a1a1a] hover:bg-cbt-mint-dark active:translate-x-[3px] active:translate-y-[3px] active:shadow-[3px_3px_0_0_#1a1a1a] transition disabled:opacity-60"
       >
-        {pending ? '신청하는 중…' : '무료 LIVE 신청하기'}
+        {pending ? '신청하는 중…' : p.replay ? 'LIVE 다시보기 신청하기' : '무료 LIVE 신청하기'}
       </button>
       <p className="-mt-2 text-center text-[13px] text-cbt-gray">
-        {p.email ? `${p.email} 계정으로 신청돼요. ` : ''}ZOOM 접속 링크는 마이페이지에서 확인할 수 있어요.
+        {p.email ? `${p.email} 계정으로 신청돼요. ` : ''}{p.replay ? '다시보기 링크는' : 'ZOOM 접속 링크는'} 마이페이지에서 확인할 수 있어요.
       </p>
     </form>
   );

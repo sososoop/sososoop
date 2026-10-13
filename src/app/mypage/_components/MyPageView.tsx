@@ -135,19 +135,37 @@ function OrderCard({ order }: { order: MyOrder }) {
 }
 
 function LiveCard({ item }: { item: MyPageData['lives'][number] }) {
-  const { live, zoom, over } = item;
+  const { live, zoom, over, replay } = item;
   return (
-    <div className={`bg-pearl border rounded-[14px] p-5 ${over ? 'border-hairline opacity-70' : 'border-primary/40'}`}>
+    <div className={`bg-pearl border rounded-[14px] p-5 ${over && !live.replayUrl ? 'border-hairline opacity-70' : 'border-primary/40'}`}>
       <div className="flex items-center justify-between gap-3 mb-1.5">
         <span className="text-[12.5px] text-ink-light">
           {live.dateLabel} {live.timeLabel} · {live.place}
         </span>
         <span className={`text-[11.5px] font-semibold px-2 py-0.5 rounded-full ${over ? 'bg-stone-100 text-ink-light' : 'bg-primary/10 text-primary'}`}>
-          {over ? '지난 LIVE' : '신청 완료'}
+          {over ? '지난 LIVE' : replay ? '다시보기 신청' : '신청 완료'}
         </span>
       </div>
       <p className="text-[15px] font-semibold text-ink leading-snug">{live.title}</p>
-      {!over &&
+      {live.replayUrl ? (
+        <div className="mt-3 pt-3 border-t border-hairline">
+          <a
+            href={live.replayUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-primary text-white text-[13.5px] font-semibold hover:bg-primary-dark transition-colors"
+          >
+            LIVE 다시보기 →
+          </a>
+        </div>
+      ) : replay ? (
+        !over && (
+          <p className="mt-3 pt-3 border-t border-hairline text-[13px] text-ink-muted leading-relaxed [word-break:keep-all]">
+            다시보기 링크는 LIVE가 끝난 뒤 이곳에 올려 드려요. 실시간 자리가 생기면 따로 안내드릴게요.
+          </p>
+        )
+      ) : (
+        !over &&
         (zoom.url ? (
           <div className="mt-3 pt-3 border-t border-hairline">
             <a
@@ -165,7 +183,8 @@ function LiveCard({ item }: { item: MyPageData['lives'][number] }) {
           <p className="mt-3 pt-3 border-t border-hairline text-[13px] text-ink-muted leading-relaxed">
             ZOOM 접속 링크는 LIVE 전에 이곳에 올려 드려요.
           </p>
-        ))}
+        ))
+      )}
       {!over && (
         <Link href={`/lectures/live/${live.slug}`} className="mt-3 inline-block text-[12.5px] text-ink-light underline hover:text-ink-muted">
           LIVE 안내 다시 보기
