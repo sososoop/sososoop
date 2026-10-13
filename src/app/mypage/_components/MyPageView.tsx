@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { MyOrder, MyOrderItem, MyPageData } from '@/lib/mypage';
 import { formatKoreanDate } from '@/lib/period';
+import PasswordCopy from '@/components/PasswordCopy';
 import { formatDate, formatWon, orderStatus, providerLabel } from '@/app/admin/_components/format';
 
 const KAKAO_CHAT = 'http://pf.kakao.com/_gngTX/chat';
@@ -134,6 +135,44 @@ function OrderCard({ order }: { order: MyOrder }) {
   );
 }
 
+// 메모에서 '암호: ABC' / '암호 123' 을 떼어 내 복사 칸으로 따로 보여 준다.
+function splitPassword(note: string | null): { password: string | null; rest: string } {
+  if (!note) return { password: null, rest: '' };
+  const m = note.match(/암호\s*[:：]?\s*([^\s·,]+)/);
+  if (!m) return { password: null, rest: note };
+  const rest = note
+    .replace(m[0], '')
+    .replace(/^[\s·,]+|[\s·,]+$/g, '')
+    .replace(/\s*·\s*·\s*/g, ' · ');
+  return { password: m[1], rest };
+}
+
+function LinkWithPassword({ href, label, note, tail }: { href: string; label: string; note: string | null; tail?: string }) {
+  const { password, rest } = splitPassword(note);
+  return (
+    <div className="mt-3 pt-3 border-t border-hairline">
+      {password && (
+        <>
+          <p className="text-[12.5px] text-ink-muted">① 암호를 먼저 복사하고 ② 링크를 열어 암호 칸에 붙여 넣어 주세요.</p>
+          <div className="mt-2">
+            <PasswordCopy value={password} />
+          </div>
+        </>
+      )}
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={`${password ? 'mt-2.5' : ''} inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-primary text-white text-[13.5px] font-semibold hover:bg-primary-dark transition-colors`}
+      >
+        {label}
+      </a>
+      {rest && <p className="mt-2 text-[12.5px] text-ink-muted whitespace-pre-line">{rest}</p>}
+      {tail && <p className="mt-2 text-[12px] text-ink-light">{tail}</p>}
+    </div>
+  );
+}
+
 function LiveCard({ item }: { item: MyPageData['lives'][number] }) {
   const { live, zoom, over, replay, materialsOpen, replayLink } = item;
   return (
@@ -148,17 +187,7 @@ function LiveCard({ item }: { item: MyPageData['lives'][number] }) {
       </div>
       <p className="text-[15px] font-semibold text-ink leading-snug">{live.title}</p>
       {replayLink.url ? (
-        <div className="mt-3 pt-3 border-t border-hairline">
-          <a
-            href={replayLink.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-primary text-white text-[13.5px] font-semibold hover:bg-primary-dark transition-colors"
-          >
-            LIVE 다시보기 →
-          </a>
-          {replayLink.note && <p className="mt-2 text-[12.5px] text-ink-muted whitespace-pre-line select-all">{replayLink.note}</p>}
-        </div>
+        <LinkWithPassword href={replayLink.url} label="LIVE 다시보기 →" note={replayLink.note} />
       ) : replay ? (
         !over && (
           <p className="mt-3 pt-3 border-t border-hairline text-[13px] text-ink-muted leading-relaxed [word-break:keep-all]">
@@ -168,18 +197,7 @@ function LiveCard({ item }: { item: MyPageData['lives'][number] }) {
       ) : (
         !over &&
         (zoom.url ? (
-          <div className="mt-3 pt-3 border-t border-hairline">
-            <a
-              href={zoom.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-primary text-white text-[13.5px] font-semibold hover:bg-primary-dark transition-colors"
-            >
-              ZOOM 입장하기 →
-            </a>
-            {zoom.note && <p className="mt-2 text-[12.5px] text-ink-muted whitespace-pre-line">{zoom.note}</p>}
-            <p className="mt-2 text-[12px] text-ink-light">시작 5~10분 전에 미리 들어와 주세요.</p>
-          </div>
+          <LinkWithPassword href={zoom.url} label="ZOOM 입장하기 →" note={zoom.note} tail="시작 5~10분 전에 미리 들어와 주세요." />
         ) : (
           <p className="mt-3 pt-3 border-t border-hairline text-[13px] text-ink-muted leading-relaxed">
             ZOOM 접속 링크는 LIVE 전에 이곳에 올려 드려요.

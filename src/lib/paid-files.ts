@@ -52,6 +52,22 @@ const CBT_GIFT: PaidFileSet = {
       label: '2급 14회 기출유형분석 심화판',
       downloadName: '제14회_2급_언어재활사_국시_기출유형분석_심화판_소소숲.pdf',
     },
+    // 2026-10-14 추가: 국시 준비하며 정리한 필기(디딤돌 유료특강 선물과 같은 파일)
+    {
+      key: 'cbt-gift/note-neuro.pdf',
+      label: '신경언어장애 필기',
+      downloadName: '신경언어장애_필기_소소숲.pdf',
+    },
+    {
+      key: 'cbt-gift/note-voice.pdf',
+      label: '음성장애 필기',
+      downloadName: '음성장애_필기_소소숲.pdf',
+    },
+    {
+      key: 'cbt-gift/note-swallow.pdf',
+      label: '삼킴장애 필기',
+      downloadName: '삼킴장애_필기_소소숲.pdf',
+    },
   ],
 };
 
