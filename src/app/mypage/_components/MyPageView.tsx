@@ -171,6 +171,14 @@ function LiveCard({ item }: { item: MyPageData['lives'][number] }) {
           LIVE 안내 다시 보기
         </Link>
       )}
+      {live.surveySlug && (
+        <Link
+          href={`/survey/${live.surveySlug}`}
+          className={`${over ? 'mt-3' : 'ml-4'} inline-block text-[12.5px] font-semibold text-primary underline hover:text-primary-dark`}
+        >
+          오프라인 모의훈련 관심자 설문 →
+        </Link>
+      )}
     </div>
   );
 }

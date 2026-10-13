@@ -15,6 +15,7 @@ export type FreeLive = {
   excluded: string[]; // 이번에 다루지 않는 것
   notes: string[]; // 미리 알려 드릴 것
   offline: string;
+  surveySlug?: string; // 오프라인 모의훈련 관심자 설문(/survey/<slug>)
   // 신청서 선택지
   examOptions: string[];
   worryOptions: string[];
@@ -53,6 +54,7 @@ export const FREE_LIVES: FreeLive[] = [
     ],
     offline:
       '혼자 CBT를 연습하는 게 어려운 선생님들을 위한 소수정예 오프라인 CBT 실전 모의훈련도 준비해 보려고 해요. LIVE에서 관심 있는 분들을 먼저 확인한 뒤 일정과 장소를 결정할 예정이에요.',
+    surveySlug: 'offline-cbt',
     examOptions: ['1급', '2급'],
     worryOptions: [
       'CBT 화면이 낯설어요',

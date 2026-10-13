@@ -190,6 +190,14 @@ export default async function FreeLivePage({ params }: { params: Promise<{ slug:
           <div className="bg-cbt-mint-soft border-[2.5px] border-dashed border-cbt-mint-dark p-6">
             <p className="text-[18px] font-black text-cbt-mint-dark">준비 중 · 오프라인 모의훈련</p>
             <p className="mt-3 text-[15px] font-semibold leading-relaxed [word-break:keep-all]">{live.offline}</p>
+            {live.surveySlug && (
+              <Link
+                href={`/survey/${live.surveySlug}`}
+                className="mt-4 inline-flex items-center px-4 py-2 border-2 border-cbt-mint-dark bg-white text-cbt-mint-dark text-[14px] font-black hover:bg-cbt-mint hover:text-white"
+              >
+                관심자 설문 남기기 →
+              </Link>
+            )}
           </div>
         </div>
       </section>
