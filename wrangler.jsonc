@@ -19,11 +19,15 @@
 		{
 			"binding": "NEXT_INC_CACHE_KV",
 			"id": "e9361786645a4cc6b87b5b4249d2ce8b"
-		},
-		// 태그 캐시 — '사이트 새로고침' 시각을 기록. 키가 `빌드ID/_N_T_…`라 증분 캐시(incremental-cache/…)와 같은 네임스페이스를 써도 겹치지 않는다.
+		}
+	],
+	// 태그 캐시 — '사이트 새로고침' 시각을 기록. 매 요청마다 읽으므로 KV(무료 읽기 10만/일)가 아니라
+	// D1(무료 행 읽기 500만/일)에 둔다. 2026-10-13 KV 태그 캐시로 하루 만에 읽기 한도 90% 도달.
+	"d1_databases": [
 		{
-			"binding": "NEXT_TAG_CACHE_KV",
-			"id": "e9361786645a4cc6b87b5b4249d2ce8b"
+			"binding": "NEXT_TAG_CACHE_D1",
+			"database_name": "sososoop-tag-cache",
+			"database_id": "842bb632-5f74-4d62-a3d8-09f545492772"
 		}
 	],
 	"routes": [
