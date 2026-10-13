@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { MyOrder, MyOrderItem, MyPageData } from '@/lib/mypage';
 import { formatKoreanDate } from '@/lib/period';
 import PasswordCopy from '@/components/PasswordCopy';
+import GiftNotice from '@/components/cbt/GiftNotice';
 import { formatDate, formatWon, orderStatus, providerLabel } from '@/app/admin/_components/format';
 
 const KAKAO_CHAT = 'http://pf.kakao.com/_gngTX/chat';
@@ -378,7 +379,8 @@ export default function MyPageView({ data, download }: { data: MyPageData; downl
         </section>
 
         {/* 구매내역 */}
-        <section>
+        <section id="orders" className="scroll-mt-24">
+          {data.cbt.ok && <GiftNotice />}
           <SectionTitle>구매내역</SectionTitle>
           {data.orders.length === 0 ? (
             <div className="bg-pearl border border-hairline rounded-[18px] p-10 text-center">

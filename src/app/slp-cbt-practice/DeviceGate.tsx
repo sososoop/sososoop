@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import GiftNotice from '@/components/cbt/GiftNotice';
 
 // 1계정 = 1기기. 서버(/slp-cbt-practice/bind)가 기기 번호를 쿠키로 확인하고, 들어올 때마다 새 번호로 바꾼다.
 // 통과하면 CBT 앱(iframe)을 띄운다. 다른 기기면 안내를 보여준다.
@@ -71,6 +72,7 @@ export default function DeviceGate({ expiresOn }: { expiresOn: string | null }) 
             이용기간: {expiresOn}까지
           </p>
         )}
+        <GiftNotice delay={900} />
         <iframe
           src="/slp-cbt-practice/app"
           title="언어재활사 CBT 연습"
