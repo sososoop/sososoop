@@ -162,7 +162,12 @@ export default function CbtFaq({ standalone = false }: { standalone?: boolean })
     <section id="faq" className={`bg-parchment px-6 pb-14 ${standalone ? 'pt-10 md:pt-14 min-h-[70vh]' : ''}`}>
       <div className="max-w-[1120px] mx-auto">
         <div className="bg-white border-2 border-cbt-ink p-6 md:p-8">
-          <h2 className="text-[21px] font-black mb-4">자주 묻는 질문</h2>
+          <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 mb-4">
+            <h2 className="text-[21px] font-black">자주 묻는 질문</h2>
+            <Link href="/slp-cbt-practice/guide" className="text-[14px] font-bold text-cbt-pop underline">
+              화면으로 보는 사용설명서 →
+            </Link>
+          </div>
           <div className="flex flex-col">
             {FAQ.map(({ q, a }) => (
               <details key={q} className="group border-t border-hairline first:border-t-0">
