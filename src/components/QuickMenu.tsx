@@ -5,7 +5,7 @@ const menuItems = [
   { label: '강의 신청', href: '/lectures', emoji: '🎓' },
   { label: '한글놀이', href: '/hangul', emoji: '🌱' },
   { label: '소소숲 소개', href: '/about', emoji: '🌲' },
-  { label: '카카오채널', href: 'http://pf.kakao.com/_gngTX', emoji: '💬', external: true },
+  { label: '고객센터', href: 'http://pf.kakao.com/_gngTX', emoji: '💬', external: true },
   { label: '인스타그램', href: 'https://instagram.com/slp_irudassam', emoji: '📸', external: true },
 ];
 

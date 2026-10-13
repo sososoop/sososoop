@@ -36,14 +36,14 @@ export default function PurchaseBox({
 
       <div className="bg-canvas rounded-[18px] p-6 border border-hairline">
         <p className="text-[14px] font-semibold text-ink mb-3">문의</p>
-        <p className="text-[14px] text-ink-muted mb-4">궁금한 점은 카카오채널로 문의해주세요.</p>
+        <p className="text-[14px] text-ink-muted mb-4">궁금한 점은 고객센터로 문의해주세요.</p>
         <a
           href="http://pf.kakao.com/_gngTX"
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#FEE500] text-[#3C1E1E] text-[14px] font-semibold hover:opacity-90 transition-opacity"
         >
-          카카오채널 문의하기
+          고객센터 문의하기
         </a>
       </div>
     </aside>

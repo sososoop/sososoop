@@ -92,7 +92,7 @@ function OrderItemRow({ item }: { item: MyOrderItem }) {
           rel="noopener noreferrer"
           className="text-ink-muted whitespace-nowrap underline hover:text-ink"
         >
-          카카오채널로 받기
+          고객센터로 받기
         </a>
       )}
     </li>
@@ -177,7 +177,7 @@ function LiveCard({ item }: { item: MyPageData['lives'][number] }) {
 
 const DOWNLOAD_NOTICES: Record<string, string> = {
   notpaid: '결제가 확인된 자료만 받을 수 있어요.',
-  expired: '다시 받을 수 있는 기간이 끝났어요. 필요하면 카카오채널로 문의해 주세요.',
+  expired: '다시 받을 수 있는 기간이 끝났어요. 필요하면 고객센터로 문의해 주세요.',
   notfound: '찾을 수 없는 파일이에요.',
   error: '파일을 준비하지 못했어요. 잠시 뒤 다시 눌러 주세요.',
 };
@@ -329,7 +329,7 @@ export default function MyPageView({ data, download }: { data: MyPageData; downl
                 <OrderCard key={order.orderId} order={order} />
               ))}
               <p className="text-[12px] text-ink-light leading-relaxed">
-                받기 버튼이 없는 자료·강의는 카카오채널로 보내 드려요. 아직 받지 못했다면 주문번호와 함께
+                받기 버튼이 없는 자료·강의는 고객센터에서 보내 드려요. 아직 받지 못했다면 주문번호와 함께
                 문의해 주세요.
               </p>
             </div>
@@ -339,7 +339,7 @@ export default function MyPageView({ data, download }: { data: MyPageData; downl
         <p className="text-center text-[12px] text-ink-light">
           회원 탈퇴를 원하면{' '}
           <a href={KAKAO_CHAT} target="_blank" rel="noopener noreferrer" className="underline hover:text-ink-muted">
-            카카오채널
+            고객센터
           </a>
           로 문의해 주세요.
         </p>

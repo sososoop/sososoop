@@ -200,7 +200,7 @@ export default async function ResourceDetailPage({
                   </li>
                   <li className="flex items-start gap-2.5">
                     <span className="text-primary mt-0.5">✓</span>
-                    이용 중 궁금한 점은 카카오채널로 문의해주세요.
+                    이용 중 궁금한 점은 고객센터로 문의해주세요.
                   </li>
                 </ul>
               </div>

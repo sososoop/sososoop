@@ -124,7 +124,7 @@ export default function ResourceTabs({ freeItems, paidResources, loggedIn, initi
             <div className="bg-canvas rounded-[18px] p-10 border border-hairline text-center">
               <p className="text-[17px] text-ink-muted">유료 자료를 준비 중입니다.</p>
               <p className="text-[14px] text-ink-light mt-2">
-                카카오채널에서 업데이트 소식을 받아보세요.
+                고객센터 채널을 추가하면 업데이트 소식을 받아볼 수 있어요.
               </p>
             </div>
           )}

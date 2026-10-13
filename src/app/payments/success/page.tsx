@@ -216,7 +216,7 @@ export default async function PaymentSuccessPage({
         <div className="w-full max-w-[440px] bg-pearl border border-hairline rounded-[18px] p-8 text-center">
           <h1 className="text-[19px] font-bold text-ink mb-2">결제는 완료됐지만 주문 기록에 문제가 생겼어요</h1>
           <p className="text-[14px] text-ink-muted leading-relaxed mb-5">
-            다시 결제하지 마시고, 아래 주문번호와 함께 카카오채널로 알려 주세요. 확인하는 대로 바로 열어 드릴게요.
+            다시 결제하지 마시고, 아래 주문번호와 함께 고객센터로 알려 주세요. 확인하는 대로 바로 열어 드릴게요.
           </p>
           <p className="text-ink font-mono text-[12px] bg-white border border-hairline rounded-[10px] px-3 py-2 mb-6 break-all">
             {orderId}
@@ -227,7 +227,7 @@ export default async function PaymentSuccessPage({
             rel="noopener noreferrer"
             className="inline-block px-6 py-3 rounded-full bg-primary text-white text-[14px] font-medium"
           >
-            카카오채널로 알리기
+            고객센터로 알리기
           </a>
         </div>
       </main>
@@ -241,7 +241,7 @@ export default async function PaymentSuccessPage({
           <h1 className="text-[19px] font-bold text-ink mb-2">결제 확인이 늦어지고 있어요</h1>
           <p className="text-[14px] text-ink-muted leading-relaxed mb-6">
             잠시 뒤 이 화면을 새로고침해 주세요. 다시 결제하지 않으셔도 돼요.
-            계속 이 화면이 나오면 주문번호({orderId})와 함께 카카오채널로 알려 주세요.
+            계속 이 화면이 나오면 주문번호({orderId})와 함께 고객센터로 알려 주세요.
           </p>
           <a
             href="http://pf.kakao.com/_gngTX/chat"
@@ -249,7 +249,7 @@ export default async function PaymentSuccessPage({
             rel="noopener noreferrer"
             className="inline-block px-6 py-3 rounded-full bg-primary text-white text-[14px] font-medium"
           >
-            카카오채널로 알리기
+            고객센터로 알리기
           </a>
         </div>
       </main>
@@ -346,7 +346,7 @@ export default async function PaymentSuccessPage({
           </div>
 
           <p className="text-[12px] text-ink-light leading-relaxed mb-5">
-            입금이 확인되면 카카오채널로 안내드려요. 입금 기한이 지나면 주문이 자동
+            입금이 확인되면 고객센터에서 안내드려요. 입금 기한이 지나면 주문이 자동
             취소됩니다.
           </p>
           <Link

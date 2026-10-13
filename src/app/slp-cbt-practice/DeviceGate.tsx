@@ -98,7 +98,7 @@ export default function DeviceGate({ expiresOn }: { expiresOn: string | null }) 
             <br />
             다른 기기나 다른 브라우저에서 들어갔거나, 이 브라우저의 쿠키를 지웠을 때도 이 화면이 나와요.
             <br />
-            기기 변경이 필요하면 소소숲 카카오채널로 문의해 주세요.
+            기기 변경이 필요하면 고객센터로 문의해 주세요.
           </p>
         </div>
       )}
