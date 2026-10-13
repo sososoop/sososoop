@@ -147,10 +147,18 @@ export async function setLiveZoom(formData: FormData) {
   const url = String(formData.get('zoomUrl') ?? '').trim().slice(0, 500);
   if (url && !/^https:\/\/([a-z0-9-]+\.)*zoom\.(us|com)\//i.test(url)) throw new Error('ZOOM 링크(https://….zoom.us/…)를 넣어 주세요.');
   const note = String(formData.get('zoomNote') ?? '').trim().slice(0, 300) || null;
+  const replayUrl = String(formData.get('replayUrl') ?? '').trim().slice(0, 500);
+  if (replayUrl && !/^https:\/\//i.test(replayUrl)) throw new Error('다시보기 링크는 https:// 로 시작해야 해요.');
+  const replayNote = String(formData.get('replayNote') ?? '').trim().slice(0, 300) || null;
 
-  const { error } = await db
-    .from('free_live_events')
-    .upsert({ slug, zoom_url: url || null, zoom_note: note, updated_at: new Date().toISOString() });
+  const { error } = await db.from('free_live_events').upsert({
+    slug,
+    zoom_url: url || null,
+    zoom_note: note,
+    replay_url: replayUrl || null,
+    replay_note: replayNote,
+    updated_at: new Date().toISOString(),
+  });
   if (error) throw new Error(`ZOOM 링크 저장 실패: ${error.message}`);
   revalidatePath('/admin/lives');
   revalidatePath('/mypage');

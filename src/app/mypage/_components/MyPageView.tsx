@@ -135,9 +135,9 @@ function OrderCard({ order }: { order: MyOrder }) {
 }
 
 function LiveCard({ item }: { item: MyPageData['lives'][number] }) {
-  const { live, zoom, over, replay, materialsOpen } = item;
+  const { live, zoom, over, replay, materialsOpen, replayLink } = item;
   return (
-    <div className={`bg-pearl border rounded-[14px] p-5 ${over && !live.replayUrl ? 'border-hairline opacity-70' : 'border-primary/40'}`}>
+    <div className={`bg-pearl border rounded-[14px] p-5 ${over && !replayLink.url ? 'border-hairline opacity-70' : 'border-primary/40'}`}>
       <div className="flex items-center justify-between gap-3 mb-1.5">
         <span className="text-[12.5px] text-ink-light">
           {live.dateLabel} {live.timeLabel} · {live.place}
@@ -147,16 +147,17 @@ function LiveCard({ item }: { item: MyPageData['lives'][number] }) {
         </span>
       </div>
       <p className="text-[15px] font-semibold text-ink leading-snug">{live.title}</p>
-      {live.replayUrl ? (
+      {replayLink.url ? (
         <div className="mt-3 pt-3 border-t border-hairline">
           <a
-            href={live.replayUrl}
+            href={replayLink.url}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-primary text-white text-[13.5px] font-semibold hover:bg-primary-dark transition-colors"
           >
             LIVE 다시보기 →
           </a>
+          {replayLink.note && <p className="mt-2 text-[12.5px] text-ink-muted whitespace-pre-line select-all">{replayLink.note}</p>}
         </div>
       ) : replay ? (
         !over && (

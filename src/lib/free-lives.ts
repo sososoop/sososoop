@@ -19,6 +19,10 @@ export type LiveRegistration = {
 };
 
 export type LiveZoom = { url: string | null; note: string | null };
+// 다시보기(녹화본) 링크 — 저장소가 공개라 코드가 아니라 DB에 둔다. 신청자 전원에게 보인다.
+export type LiveReplay = { url: string | null; note: string | null };
+type EventRow = { zoom: LiveZoom; replay: LiveReplay };
+const EMPTY: EventRow = { zoom: { url: null, note: null }, replay: { url: null, note: null } };
 
 // 마이페이지용: 내가 신청한 LIVE와 (있으면) ZOOM 링크
 export type MyLive = {
@@ -27,6 +31,7 @@ export type MyLive = {
   replay: boolean; // 좌석 마감 뒤 '다시보기 신청' — ZOOM 링크를 보여 주지 않는다
   materialsOpen: boolean; // 강의 자료 다운로드 버튼을 보여 줄 때
   zoom: LiveZoom;
+  replayLink: LiveReplay;
 };
 
 type Row = Record<string, unknown>;
@@ -64,19 +69,25 @@ export async function getMyRegistration(slug: string, userId: string): Promise<L
   return toRegistration(data);
 }
 
-async function zoomMap(slugs: string[]): Promise<Map<string, LiveZoom>> {
+async function eventMap(slugs: string[]): Promise<Map<string, EventRow>> {
   const db = createAdminClient();
-  const map = new Map<string, LiveZoom>();
+  const map = new Map<string, EventRow>();
   if (!db || slugs.length === 0) return map;
-  const { data } = await db.from('free_live_events').select('slug, zoom_url, zoom_note').in('slug', slugs);
+  const { data } = await db
+    .from('free_live_events')
+    .select('slug, zoom_url, zoom_note, replay_url, replay_note')
+    .in('slug', slugs);
   for (const r of data ?? []) {
-    map.set(String(r.slug), { url: r.zoom_url ?? null, note: r.zoom_note ?? null });
+    map.set(String(r.slug), {
+      zoom: { url: r.zoom_url ?? null, note: r.zoom_note ?? null },
+      replay: { url: r.replay_url ?? null, note: r.replay_note ?? null },
+    });
   }
   return map;
 }
 
 export async function getLiveZoom(slug: string): Promise<LiveZoom> {
-  return (await zoomMap([slug])).get(slug) ?? { url: null, note: null };
+  return ((await eventMap([slug])).get(slug) ?? EMPTY).zoom;
 }
 
 // 마이페이지: 내가 신청한 LIVE 목록(가까운 순), 신청자에게만 ZOOM 링크를 붙인다.
@@ -93,15 +104,17 @@ export async function getMyLives(userId: string): Promise<MyLive[]> {
     .map((r) => ({ live: getFreeLive(String(r.event_slug)), createdAt: String(r.created_at) }))
     .filter((m): m is { live: FreeLive; createdAt: string } => !!m.live)
     .sort((a, b) => a.live.startsAt.localeCompare(b.live.startsAt));
-  const zooms = await zoomMap(mine.map((m) => m.live.slug));
+  const events = await eventMap(mine.map((m) => m.live.slug));
   return mine.map(({ live, createdAt }) => {
     const replay = isReplaySignup(live, createdAt);
+    const ev = events.get(live.slug) ?? EMPTY;
     return {
       live,
       over: isLiveOver(live),
       replay,
       materialsOpen: isMaterialsOpen(live),
-      zoom: replay ? { url: null, note: null } : zooms.get(live.slug) ?? { url: null, note: null },
+      zoom: replay ? EMPTY.zoom : ev.zoom,
+      replayLink: ev.replay,
     };
   });
 }
@@ -109,7 +122,7 @@ export async function getMyLives(userId: string): Promise<MyLive[]> {
 // 관리자: LIVE별 신청자(취소 포함)와 ZOOM 링크. 표가 없으면 tableReady=false.
 export async function listLiveRegistrations(): Promise<{
   tableReady: boolean;
-  events: { live: FreeLive; zoom: LiveZoom; registrations: LiveRegistration[] }[];
+  events: { live: FreeLive; zoom: LiveZoom; replay: LiveReplay; registrations: LiveRegistration[] }[];
 } | null> {
   const db = createAdminClient();
   if (!db) return null;
@@ -117,16 +130,16 @@ export async function listLiveRegistrations(): Promise<{
     .from('free_live_registrations')
     .select('*')
     .order('created_at', { ascending: true });
-  if (error) return { tableReady: false, events: FREE_LIVES.map((live) => ({ live, zoom: { url: null, note: null }, registrations: [] })) };
+  if (error) return { tableReady: false, events: FREE_LIVES.map((live) => ({ live, ...EMPTY, registrations: [] })) };
   const rows = (data ?? []).map(toRegistration);
-  const zooms = await zoomMap(FREE_LIVES.map((l) => l.slug));
+  const events = await eventMap(FREE_LIVES.map((l) => l.slug));
   return {
     tableReady: true,
     events: [...FREE_LIVES]
       .sort((a, b) => b.startsAt.localeCompare(a.startsAt))
       .map((live) => ({
         live,
-        zoom: zooms.get(live.slug) ?? { url: null, note: null },
+        ...(events.get(live.slug) ?? EMPTY),
         registrations: rows.filter((r) => r.eventSlug === live.slug),
       })),
   };

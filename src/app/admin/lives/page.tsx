@@ -22,7 +22,7 @@ export default async function AdminLivesPage() {
         )}
       </div>
 
-      {result.events.map(({ live, zoom, registrations }) => {
+      {result.events.map(({ live, zoom, replay, registrations }) => {
         const active = registrations.filter((r) => !r.canceledAt);
         const canceled = registrations.length - active.length;
         // 좌석 마감 뒤 신청은 '다시보기'로 따로 센다(ZOOM 링크 문자는 좌석 신청자에게만).
@@ -68,6 +68,19 @@ export default async function AdminLivesPage() {
                 name="zoomNote"
                 defaultValue={zoom.note ?? ''}
                 placeholder="함께 보여 줄 메모 (예: 회의 ID 123 456 7890 · 암호 1013)"
+                className="px-3 py-2 rounded-lg border border-hairline bg-white text-[13px]"
+              />
+              <label className="mt-2 text-[13px] font-semibold text-ink">다시보기 링크 (신청자 전원 마이페이지에 보여요)</label>
+              <input
+                name="replayUrl"
+                defaultValue={replay.url ?? ''}
+                placeholder="https://us06web.zoom.us/rec/share/… 또는 유튜브 링크"
+                className="px-3 py-2 rounded-lg border border-hairline bg-white text-[13px]"
+              />
+              <input
+                name="replayNote"
+                defaultValue={replay.note ?? ''}
+                placeholder="함께 보여 줄 메모 (예: 암호 ABC123)"
                 className="px-3 py-2 rounded-lg border border-hairline bg-white text-[13px]"
               />
               <div className="flex items-center gap-3">

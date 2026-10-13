@@ -27,7 +27,6 @@ export type FreeLive = {
   // 좌석 마감: 이 시각부터 들어온 신청은 '다시보기 신청'(ZOOM 링크 대신 다시보기 링크)
   seatsClosedAt?: string; // ISO(+09:00)
   seatsClosedNotice?: string[]; // 좌석 마감 안내(문단)
-  replayUrl?: string; // 다시보기 링크 — 넣으면 신청자 전원 마이페이지에 보인다
   materials?: LiveMaterial[]; // 신청자 전원이 받을 수 있는 강의 자료
   materialsFrom?: string; // 이 시각부터 받을 수 있다(ISO, 없으면 바로)
   // 신청서 선택지

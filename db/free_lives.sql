@@ -7,6 +7,8 @@ create table if not exists public.free_live_events (
   slug text primary key,                 -- src/data/freeLives.ts 의 slug
   zoom_url text,
   zoom_note text,                        -- 회의 ID·암호 등 함께 보여 줄 메모
+  replay_url text,                       -- 다시보기(녹화본) 링크 — 신청자 전원 마이페이지에 보인다
+  replay_note text,                      -- 다시보기 암호 등 메모
   updated_at timestamptz not null default now()
 );
 
@@ -37,3 +39,7 @@ alter table public.free_live_registrations enable row level security;
 --   ZOOM 링크와 신청자 연락처가 공개 anon 키로 새어 나가지 않게 한다.
 grant select, insert, update, delete on public.free_live_events to service_role;
 grant select, insert, update, delete on public.free_live_registrations to service_role;
+
+-- 2026-10-14 추가: 다시보기 링크(이미 표를 만든 뒤라면 이것만 실행)
+alter table public.free_live_events add column if not exists replay_url text;
+alter table public.free_live_events add column if not exists replay_note text;
