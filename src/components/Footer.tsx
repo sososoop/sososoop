@@ -50,7 +50,10 @@ export default function Footer() {
               <p>사업장 주소: 서울특별시 강남구 개포로 264, 126-2503</p>
               <p>
                 전화: <a href="tel:010-5668-8046" className="hover:text-ink transition-colors">010-5668-8046</a>
-                {' '}· 문의: 카카오채널 @소소숲
+                {' '}· 문의:{' '}
+                <a href="http://pf.kakao.com/_gngTX" target="_blank" rel="noopener noreferrer" className="hover:text-ink transition-colors">
+                  고객센터
+                </a>
               </p>
             </div>
           </div>

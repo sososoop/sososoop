@@ -156,9 +156,10 @@ const FAQ: { q: string; a: ReactNode }[] = [
   },
 ];
 
-export default function CbtFaq() {
+// standalone: /slp-cbt-practice/faq 처럼 FAQ만 단독으로 보여 줄 때(위 여백 추가)
+export default function CbtFaq({ standalone = false }: { standalone?: boolean }) {
   return (
-    <section className="bg-parchment px-6 pb-14">
+    <section id="faq" className={`bg-parchment px-6 pb-14 ${standalone ? 'pt-10 md:pt-14 min-h-[70vh]' : ''}`}>
       <div className="max-w-[1120px] mx-auto">
         <div className="bg-white border-2 border-cbt-ink p-6 md:p-8">
           <h2 className="text-[21px] font-black mb-4">자주 묻는 질문</h2>
