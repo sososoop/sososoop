@@ -135,7 +135,7 @@ function OrderCard({ order }: { order: MyOrder }) {
 }
 
 function LiveCard({ item }: { item: MyPageData['lives'][number] }) {
-  const { live, zoom, over, replay } = item;
+  const { live, zoom, over, replay, materialsOpen } = item;
   return (
     <div className={`bg-pearl border rounded-[14px] p-5 ${over && !live.replayUrl ? 'border-hairline opacity-70' : 'border-primary/40'}`}>
       <div className="flex items-center justify-between gap-3 mb-1.5">
@@ -185,6 +185,25 @@ function LiveCard({ item }: { item: MyPageData['lives'][number] }) {
           </p>
         ))
       )}
+      {materialsOpen && live.materials && (
+        <div className="mt-3 pt-3 border-t border-hairline">
+          <p className="text-[12px] text-ink-light">신청자 전용 강의 자료</p>
+          <div className="mt-2 flex flex-col sm:flex-row sm:flex-wrap gap-2">
+            {live.materials.map((file) => (
+              <a
+                key={file.key}
+                href={`/mypage/live-download?live=${encodeURIComponent(live.slug)}&file=${encodeURIComponent(file.key)}`}
+                className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-full bg-primary text-white text-[13px] font-semibold hover:bg-primary-dark transition-colors"
+              >
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+                  <path d="M10 3a1 1 0 011 1v7.59l2.3-2.3a1 1 0 111.4 1.42l-4 4a1 1 0 01-1.4 0l-4-4a1 1 0 111.4-1.42L9 11.6V4a1 1 0 011-1zM4 15a1 1 0 011 1h10a1 1 0 112 0 2 2 0 01-2 2H5a2 2 0 01-2-2 1 1 0 011-1z" />
+                </svg>
+                {file.label} PDF
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
       {!over && (
         <Link href={`/lectures/live/${live.slug}`} className="mt-3 inline-block text-[12.5px] text-ink-light underline hover:text-ink-muted">
           LIVE 안내 다시 보기
@@ -206,6 +225,8 @@ const DOWNLOAD_NOTICES: Record<string, string> = {
   notpaid: '결제가 확인된 자료만 받을 수 있어요.',
   expired: '다시 받을 수 있는 기간이 끝났어요. 필요하면 고객센터로 문의해 주세요.',
   notfound: '찾을 수 없는 파일이에요.',
+  notregistered: 'LIVE 신청자만 받을 수 있는 자료예요.',
+  notyet: '강의 자료는 LIVE가 시작되면 받을 수 있어요.',
   error: '파일을 준비하지 못했어요. 잠시 뒤 다시 눌러 주세요.',
 };
 

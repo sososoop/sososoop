@@ -1,6 +1,14 @@
 // 무료 LIVE(줌 특강) 소개·일정. 신청 기록과 ZOOM 링크는 Supabase(db/free_lives.sql)에 있다.
 // 새 LIVE를 열 때는 이 배열에 하나를 더하고, 관리자 화면(/admin/lives)에서 ZOOM 링크를 넣는다.
 
+// LIVE 강의 자료(PDF) — 파일은 Supabase 비공개 저장소(paid-files)에 있고,
+// 신청자만 마이페이지에서 받는다(/mypage/live-download).
+export type LiveMaterial = {
+  key: string; // 저장소 안 경로
+  label: string; // 마이페이지 버튼 이름
+  downloadName: string; // 받았을 때 파일 이름
+};
+
 export type FreeLive = {
   slug: string; // 주소: /lectures/live/<slug>
   title: string;
@@ -20,6 +28,8 @@ export type FreeLive = {
   seatsClosedAt?: string; // ISO(+09:00)
   seatsClosedNotice?: string[]; // 좌석 마감 안내(문단)
   replayUrl?: string; // 다시보기 링크 — 넣으면 신청자 전원 마이페이지에 보인다
+  materials?: LiveMaterial[]; // 신청자 전원이 받을 수 있는 강의 자료
+  materialsFrom?: string; // 이 시각부터 받을 수 있다(ISO, 없으면 바로)
   // 신청서 선택지
   examOptions: string[];
   worryOptions: string[];
@@ -66,6 +76,14 @@ export const FREE_LIVES: FreeLive[] = [
       '대신 아래 신청서를 남겨 주시면 LIVE가 끝난 뒤 마이페이지에서 다시보기 링크를 확인하실 수 있어요.',
       '실시간 자리가 생기면 따로 안내드릴게요 :)',
     ],
+    materials: [
+      {
+        key: 'live/cbt-1013/slides.pdf',
+        label: 'LIVE 강의안',
+        downloadName: '언어재활사_CBT_실전적응_무료LIVE_강의안_소소숲.pdf',
+      },
+    ],
+    materialsFrom: '2026-10-13T21:00:00+09:00',
     examOptions: ['1급', '2급'],
     worryOptions: [
       'CBT 화면이 낯설어요',
@@ -89,6 +107,12 @@ export function isSeatsClosed(live: FreeLive, now = Date.now()): boolean {
 // 이 신청이 좌석 마감 뒤에 들어온 '다시보기 신청'인지
 export function isReplaySignup(live: FreeLive, createdAt: string): boolean {
   return !!live.seatsClosedAt && new Date(createdAt).getTime() >= new Date(live.seatsClosedAt).getTime();
+}
+
+// 강의 자료를 받을 수 있는 때인지
+export function isMaterialsOpen(live: FreeLive, now = Date.now()): boolean {
+  if (!live.materials?.length) return false;
+  return !live.materialsFrom || now >= new Date(live.materialsFrom).getTime();
 }
 
 // LIVE 시작 전인지(좌석 신청 취소는 시작 전까지만)

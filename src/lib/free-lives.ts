@@ -1,6 +1,6 @@
 // 무료 LIVE 신청·ZOOM 링크 — 서버 전용. 신청 기록과 링크는 service_role 키로만 읽고 쓴다.
 import { createAdminClient } from '@/lib/supabase/admin';
-import { FREE_LIVES, getFreeLive, isLiveOver, isReplaySignup, type FreeLive } from '@/data/freeLives';
+import { FREE_LIVES, getFreeLive, isLiveOver, isMaterialsOpen, isReplaySignup, type FreeLive } from '@/data/freeLives';
 
 export type LiveRegistration = {
   id: string;
@@ -25,6 +25,7 @@ export type MyLive = {
   live: FreeLive;
   over: boolean;
   replay: boolean; // 좌석 마감 뒤 '다시보기 신청' — ZOOM 링크를 보여 주지 않는다
+  materialsOpen: boolean; // 강의 자료 다운로드 버튼을 보여 줄 때
   zoom: LiveZoom;
 };
 
@@ -99,6 +100,7 @@ export async function getMyLives(userId: string): Promise<MyLive[]> {
       live,
       over: isLiveOver(live),
       replay,
+      materialsOpen: isMaterialsOpen(live),
       zoom: replay ? { url: null, note: null } : zooms.get(live.slug) ?? { url: null, note: null },
     };
   });
