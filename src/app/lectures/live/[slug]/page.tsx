@@ -220,6 +220,7 @@ export default async function FreeLivePage({ params }: { params: Promise<{ slug:
           </H2>
           {seatsClosed ? (
             !registration &&
+            open &&
             (over ? live.pastNotice : live.seatsClosedNotice) && (
               <div className="mt-6 bg-[#fff6e0] border-2 border-cbt-ink px-5 py-5 md:px-6">
                 <p className="inline-flex items-center gap-2 bg-cbt-ink text-white text-[13px] font-black tracking-[0.06em] px-2.5 py-1">

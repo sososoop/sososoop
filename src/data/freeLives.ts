@@ -28,6 +28,7 @@ export type FreeLive = {
   seatsClosedAt?: string; // ISO(+09:00)
   seatsClosedNotice?: string[]; // 좌석 마감 안내(문단)
   replayUntilLabel?: string; // 다시보기 신청 마감 표기(isLiveOpen의 시작+3일과 맞출 것)
+  signupClosedAt?: string; // 이 시각부터 모든 신청(다시보기 포함)을 막는다(ISO, 시작+3일보다 일찍 닫을 때)
   pastNotice?: string[]; // LIVE가 끝난 뒤 미신청자에게 보이는 안내(문단)
   materials?: LiveMaterial[]; // 신청자 전원이 받을 수 있는 강의 자료
   materialsFrom?: string; // 이 시각부터 받을 수 있다(ISO, 없으면 바로)
@@ -78,6 +79,8 @@ export const FREE_LIVES: FreeLive[] = [
       '실시간 자리가 생기면 따로 안내드릴게요 :)',
     ],
     replayUntilLabel: '10월 16일 (금) 밤 9시',
+    // 다시보기 안내 문자(10/14 아침)를 보낸 뒤라 다시보기 신청도 일찍 닫음.
+    signupClosedAt: '2026-10-14T16:00:00+09:00',
     pastNotice: [
       '10월 13일 LIVE는 많은 분들과 함께 잘 마쳤어요.',
       '아래 신청서를 남겨 주시면 마이페이지에서 다시보기 링크와 LIVE 강의안을 바로 확인하실 수 있어요.',
@@ -128,6 +131,7 @@ export function isBeforeStart(live: FreeLive, now = Date.now()): boolean {
 
 // 시작 시각이 지나면 신청을 닫는다. 다시보기 신청은 시작 뒤 3일까지 받는다.
 export function isLiveOpen(live: FreeLive, now = Date.now()): boolean {
+  if (live.signupClosedAt && now >= new Date(live.signupClosedAt).getTime()) return false;
   const end = new Date(live.startsAt).getTime() + (live.seatsClosedAt ? 3 * 24 * 60 * 60 * 1000 : 0);
   return now < end;
 }
