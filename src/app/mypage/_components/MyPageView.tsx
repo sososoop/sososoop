@@ -189,6 +189,10 @@ function LiveCard({ item }: { item: MyPageData['lives'][number] }) {
       <p className="text-[15px] font-semibold text-ink leading-snug">{live.title}</p>
       {replayLink.url ? (
         <LinkWithPassword href={replayLink.url} label="LIVE 다시보기 →" note={replayLink.note} />
+      ) : over ? (
+        <p className="mt-3 pt-3 border-t border-hairline text-[13px] text-ink-muted leading-relaxed [word-break:keep-all]">
+          다시보기 링크를 준비하고 있어요. 올라오면 이곳에서 바로 볼 수 있어요.
+        </p>
       ) : replay ? (
         !over && (
           <p className="mt-3 pt-3 border-t border-hairline text-[13px] text-ink-muted leading-relaxed [word-break:keep-all]">

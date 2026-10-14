@@ -27,6 +27,8 @@ export type FreeLive = {
   // 좌석 마감: 이 시각부터 들어온 신청은 '다시보기 신청'(ZOOM 링크 대신 다시보기 링크)
   seatsClosedAt?: string; // ISO(+09:00)
   seatsClosedNotice?: string[]; // 좌석 마감 안내(문단)
+  replayUntilLabel?: string; // 다시보기 신청 마감 표기(isLiveOpen의 시작+3일과 맞출 것)
+  pastNotice?: string[]; // LIVE가 끝난 뒤 미신청자에게 보이는 안내(문단)
   materials?: LiveMaterial[]; // 신청자 전원이 받을 수 있는 강의 자료
   materialsFrom?: string; // 이 시각부터 받을 수 있다(ISO, 없으면 바로)
   // 신청서 선택지
@@ -74,6 +76,11 @@ export const FREE_LIVES: FreeLive[] = [
       'ZOOM 동시 입장 정원이 100명이라, 기존 신청자분들도 접속 순서에 따라 입장이 어려울 수 있어요.',
       '대신 아래 신청서를 남겨 주시면 LIVE가 끝난 뒤 마이페이지에서 다시보기 링크를 확인하실 수 있어요.',
       '실시간 자리가 생기면 따로 안내드릴게요 :)',
+    ],
+    replayUntilLabel: '10월 16일 (금) 밤 9시',
+    pastNotice: [
+      '10월 13일 LIVE는 많은 분들과 함께 잘 마쳤어요.',
+      '아래 신청서를 남겨 주시면 마이페이지에서 다시보기 링크와 LIVE 강의안을 바로 확인하실 수 있어요.',
     ],
     materials: [
       {

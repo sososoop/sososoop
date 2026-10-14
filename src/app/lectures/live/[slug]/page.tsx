@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { getMyRegistration } from '@/lib/free-lives';
-import { FREE_LIVE_CONSENT, getFreeLive, isBeforeStart, isLiveOpen, isReplaySignup, isSeatsClosed } from '@/data/freeLives';
+import { FREE_LIVE_CONSENT, getFreeLive, isBeforeStart, isLiveOpen, isLiveOver, isReplaySignup, isSeatsClosed } from '@/data/freeLives';
 import AutoVideo from '@/components/cbt/AutoVideo';
 import LiveApplyForm from './LiveApplyForm';
 import { cancelFreeLive } from '../actions';
@@ -66,6 +66,8 @@ export default async function FreeLivePage({ params }: { params: Promise<{ slug:
   const registration = user ? await getMyRegistration(live.slug, user.id) : null;
   const open = isLiveOpen(live);
   const seatsClosed = isSeatsClosed(live);
+  // LIVE가 끝난 뒤(시작+3시간)엔 '만나요'·'실시간 자리' 같은 예고 문구 대신 다시보기 안내로 바꾼다.
+  const over = isLiveOver(live);
   const replay = !!registration && isReplaySignup(live, registration.createdAt);
   const meta = user?.user_metadata ?? {};
   const defaultName = String(meta.name || meta.full_name || meta.nickname || '');
@@ -86,10 +88,16 @@ export default async function FreeLivePage({ params }: { params: Promise<{ slug:
           <div>
             <div className="flex flex-wrap items-center gap-3">
               <Chip>무료 LIVE</Chip>
-              <span className="inline-flex items-center gap-2 bg-cbt-ink text-white text-[14px] font-black tracking-[0.08em] px-3 py-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-cbt-red animate-pulse" aria-hidden />
-                LIVE
-              </span>
+              {over ? (
+                <span className="inline-flex items-center bg-cbt-gray text-white text-[14px] font-black tracking-[0.04em] px-3 py-1.5">
+                  LIVE 종료 · 다시보기
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-2 bg-cbt-ink text-white text-[14px] font-black tracking-[0.08em] px-3 py-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-cbt-red animate-pulse" aria-hidden />
+                  LIVE
+                </span>
+              )}
             </div>
             <h1 className="mt-6 tracking-tight">
               <span className="block text-[22px] md:text-[26px] font-bold text-[#4a4a46]">언어재활사 CBT,</span>
@@ -113,7 +121,7 @@ export default async function FreeLivePage({ params }: { params: Promise<{ slug:
                 href="#apply"
                 className="inline-flex items-center px-7 py-3.5 border-2 border-cbt-ink bg-cbt-mint text-white text-[17px] font-black shadow-[5px_5px_0_0_#1a1a1a] hover:bg-cbt-mint-dark"
               >
-                {registration ? '신청 내역 보기 ↓' : !open ? '신청 마감' : seatsClosed ? '다시보기 신청하기 ↓' : '무료로 신청하기 ↓'}
+                {registration ? (over ? '다시보기 안내 보기 ↓' : '신청 내역 보기 ↓') : !open ? '신청 마감' : seatsClosed ? '다시보기 신청하기 ↓' : '무료로 신청하기 ↓'}
               </a>
               <span className="text-[14px] font-bold text-cbt-gray">제14회 국가시험 차석 합격자 · 언어재활사 이승윤</span>
             </div>
@@ -212,16 +220,19 @@ export default async function FreeLivePage({ params }: { params: Promise<{ slug:
           </H2>
           {seatsClosed ? (
             !registration &&
-            live.seatsClosedNotice && (
+            (over ? live.pastNotice : live.seatsClosedNotice) && (
               <div className="mt-6 bg-[#fff6e0] border-2 border-cbt-ink px-5 py-5 md:px-6">
                 <p className="inline-flex items-center gap-2 bg-cbt-ink text-white text-[13px] font-black tracking-[0.06em] px-2.5 py-1">
                   <span className="w-2 h-2 rounded-full bg-cbt-red" aria-hidden />
-                  LIVE 좌석 마감
+                  {over ? 'LIVE 종료 · 다시보기 신청 중' : 'LIVE 좌석 마감'}
                 </p>
                 <div className="mt-3 flex flex-col gap-1.5 text-[15.5px] font-semibold text-[#3a3a36] leading-relaxed [word-break:keep-all]">
-                  {live.seatsClosedNotice.map((t, i) => (
+                  {(over ? live.pastNotice : live.seatsClosedNotice)?.map((t, i) => (
                     <p key={i} className={i === 0 ? 'text-[17px] font-black text-cbt-ink' : ''}>{t}</p>
                   ))}
+                  {over && open && live.replayUntilLabel && (
+                    <p>다시보기 신청은 <strong className="text-cbt-ink">{live.replayUntilLabel}</strong>까지 받아요.</p>
+                  )}
                 </div>
               </div>
             )
@@ -235,12 +246,31 @@ export default async function FreeLivePage({ params }: { params: Promise<{ slug:
                 <p className="text-[44px]" aria-hidden>📺</p>
                 <p className="mt-2 text-[24px] font-black">다시보기 신청이 완료되었어요!</p>
                 <p className="mt-3 text-[15px] font-semibold text-[#3a3a36] leading-relaxed [word-break:keep-all]">
-                  {registration.name} 선생님, LIVE가 끝난 뒤 <strong>마이페이지</strong>에서 다시보기 링크를 확인하실 수 있어요.
-                  <br />실시간 자리가 생기면 따로 안내드릴게요.
+                  {over ? (
+                    <>{registration.name} 선생님, <strong>마이페이지</strong>에서 다시보기 링크와 LIVE 강의안을 확인하실 수 있어요.</>
+                  ) : (
+                    <>
+                      {registration.name} 선생님, LIVE가 끝난 뒤 <strong>마이페이지</strong>에서 다시보기 링크를 확인하실 수 있어요.
+                      <br />실시간 자리가 생기면 따로 안내드릴게요.
+                    </>
+                  )}
                 </p>
                 <div className="mt-6 flex flex-wrap justify-center gap-3">
                   <Link href="/mypage#lives" className="inline-flex items-center px-6 py-3 border-2 border-cbt-ink bg-cbt-pop text-white text-[16px] font-black hover:bg-[#2f49b0]">
                     마이페이지 보기 →
+                  </Link>
+                </div>
+              </div>
+            ) : registration && over ? (
+              <div className="text-center py-4">
+                <p className="text-[44px]" aria-hidden>🙏</p>
+                <p className="mt-2 text-[24px] font-black">LIVE에 함께해 주셔서 고마워요!</p>
+                <p className="mt-3 text-[15px] font-semibold text-[#3a3a36] leading-relaxed [word-break:keep-all]">
+                  {registration.name} 선생님, 다시보기 링크와 LIVE 강의안은 <strong>마이페이지</strong>에서 확인할 수 있어요.
+                </p>
+                <div className="mt-6 flex flex-wrap justify-center gap-3">
+                  <Link href="/mypage#lives" className="inline-flex items-center px-6 py-3 border-2 border-cbt-ink bg-cbt-pop text-white text-[16px] font-black hover:bg-[#2f49b0]">
+                    마이페이지에서 다시보기 →
                   </Link>
                 </div>
               </div>
@@ -265,7 +295,7 @@ export default async function FreeLivePage({ params }: { params: Promise<{ slug:
                 )}
               </div>
             ) : !open ? (
-              <p className="py-8 text-center text-[18px] font-black">신청이 마감되었어요.</p>
+              <p className="py-8 text-center text-[18px] font-black">{over ? '다시보기 신청이 마감되었어요.' : '신청이 마감되었어요.'}</p>
             ) : !user ? (
               <div className="text-center py-4">
                 <p className="text-[20px] font-black">로그인하고 신청해 주세요</p>
@@ -292,6 +322,7 @@ export default async function FreeLivePage({ params }: { params: Promise<{ slug:
                 timeLabel={live.timeLabel}
                 consent={FREE_LIVE_CONSENT}
                 replay={seatsClosed}
+                over={over}
               />
             )}
           </div>

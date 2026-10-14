@@ -15,6 +15,7 @@ type Props = {
   timeLabel: string;
   consent: string;
   replay?: boolean; // 좌석 마감 뒤 '다시보기 신청'
+  over?: boolean; // LIVE가 끝난 뒤(실시간 자리 안내 대신 일반 안내)
 };
 
 const initial: ApplyState = { ok: false, message: '' };
@@ -51,7 +52,9 @@ export default function LiveApplyForm(p: Props) {
         </div>
       </div>
       <p id="phone-why" className="-mt-3 text-[13px] text-cbt-gray leading-relaxed [word-break:keep-all]">
-        {p.replay ? (
+        {p.over ? (
+          <>📱 다시보기나 강의 관련 안내가 있을 때 <strong className="text-cbt-ink">문자로 연락</strong>드려요.</>
+        ) : p.replay ? (
           <>📱 실시간 자리가 생기면 <strong className="text-cbt-ink">문자로 안내</strong>드려요.</>
         ) : (
           <>📱 LIVE를 잊지 않고 들어오실 수 있도록 <strong className="text-cbt-ink">시작 전에 알림 문자</strong>를 보내 드려요.</>

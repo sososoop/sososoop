@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { lectures as staticLectures } from '@/data/lectures';
 import { getLectures } from '@/lib/notion';
-import { FREE_LIVES, isLiveOpen, isSeatsClosed } from '@/data/freeLives';
+import { FREE_LIVES, isLiveOpen, isLiveOver, isSeatsClosed } from '@/data/freeLives';
 
 export const metadata: Metadata = {
   title: '강의 목록',
@@ -34,26 +34,31 @@ export default async function LecturesPage() {
 
       <section className="bg-canvas py-12 px-6">
         <div className="max-w-[1000px] mx-auto">
-          {/* 신청 중인 무료 LIVE */}
-          {openLives.map((live) => (
+          {/* 신청 중인 무료 LIVE — 끝난 LIVE는 다시보기 신청 기간 동안 '다시보기'로 보여 준다 */}
+          {openLives.map((live) => {
+            const over = isLiveOver(live);
+            return (
             <Link
               key={live.slug}
               href={`/lectures/live/${live.slug}`}
               className="mb-8 flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 rounded-[18px] border-2 border-cbt-ink bg-cbt-paper p-6 shadow-[8px_8px_0_0_#12B5A5] hover:-translate-y-0.5 transition-transform group"
             >
               <span className="inline-flex items-center gap-2 self-start bg-cbt-ink text-white text-[13px] font-black tracking-[0.08em] px-3 py-1.5">
-                <span className="w-2 h-2 rounded-full bg-cbt-red animate-pulse" aria-hidden />
-                무료 LIVE
+                {!over && <span className="w-2 h-2 rounded-full bg-cbt-red animate-pulse" aria-hidden />}
+                {over ? '무료 LIVE 다시보기' : '무료 LIVE'}
               </span>
               <div className="flex-1 min-w-0">
                 <p className="text-[19px] font-black text-cbt-ink leading-snug">{live.title}</p>
                 <p className="mt-1 text-[14px] text-ink-muted">
-                  {live.dateLabel} {live.timeLabel} · {live.place} · 참가비 무료
+                  {over
+                    ? `${live.dateLabel} LIVE 녹화본 · 참가비 무료${live.replayUntilLabel ? ` · ${live.replayUntilLabel}까지 신청` : ''}`
+                    : `${live.dateLabel} ${live.timeLabel} · ${live.place} · 참가비 무료`}
                 </p>
               </div>
               <span className="text-[15px] font-bold text-cbt-pop whitespace-nowrap group-hover:underline">{isSeatsClosed(live) ? '다시보기 신청하기 →' : '무료 신청하기 →'}</span>
             </Link>
-          ))}
+            );
+          })}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {lectures.map((lecture) => (
               <Link

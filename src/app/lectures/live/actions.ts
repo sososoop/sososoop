@@ -4,7 +4,7 @@
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { getFreeLive, isLiveOpen, isSeatsClosed } from '@/data/freeLives';
+import { getFreeLive, isBeforeStart, isLiveOpen, isSeatsClosed } from '@/data/freeLives';
 
 export type ApplyState = { ok: boolean; message: string };
 
@@ -71,7 +71,8 @@ export async function applyFreeLive(_prev: ApplyState, formData: FormData): Prom
 
 export async function cancelFreeLive(formData: FormData) {
   const live = getFreeLive(String(formData.get('slug') ?? ''));
-  if (!live) return;
+  // 취소는 시작 전까지만 — 열어 둔 화면에서 늦게 눌러도 다시보기·강의 자료 권한이 사라지지 않게.
+  if (!live || !isBeforeStart(live)) return;
   const supabase = await createClient();
   const {
     data: { user },
