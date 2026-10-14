@@ -80,13 +80,40 @@ const sections: LegalSection[] = [
           '토스페이먼츠 주식회사 — 결제 처리',
           '주식회사 카카오 — 카카오 로그인, 카카오채널을 통한 상담 및 안내',
           '주식회사 알리는사람들(알리고) — 안내 문자 발송',
-          'Cloudflare, Inc. · Vercel Inc. — 웹사이트 호스팅',
+          'Google LLC — 안내 메일 발송(Gmail)',
+          'Cloudflare, Inc. — 웹사이트 호스팅',
         ],
       },
     ],
   },
   {
-    heading: '6. 정보주체의 권리·의무 및 행사 방법',
+    heading: '6. 개인정보의 국외 이전',
+    blocks: [
+      {
+        type: 'p',
+        text: '소소숲은 서비스 제공(계약 이행)을 위해 아래와 같이 개인정보를 국외 업체에 보관·처리하도록 맡기고 있습니다. 「개인정보 보호법」 제28조의8 제1항 제3호에 따라 이 처리방침에 공개하는 방식으로 이전합니다.',
+      },
+      {
+        type: 'list',
+        items: [
+          'Supabase, Inc. (미국, privacy@supabase.com) — 이전 항목: 이메일, 이름, 휴대폰 번호, 주문·신청 기록 · 목적: 회원·주문·신청 정보 보관 · 저장 위치: 대한민국(서울) 서버',
+          'Cloudflare, Inc. (미국, privacyquestions@cloudflare.com) — 이전 항목: 접속 기록(IP 주소 등)과 웹사이트 이용 중 전송되는 정보 · 목적: 웹사이트 호스팅·전송 · 처리 위치: 미국 등 Cloudflare 데이터센터가 있는 국가',
+          'Notion Labs, Inc. (미국, privacy@makenotion.com) — 이전 항목: 신청폼으로 받은 이름, 휴대전화번호, 이메일 · 목적: 신청 정보 수집·보관',
+          'Google LLC (미국, support.google.com/policies) — 이전 항목: 이메일 · 목적: 안내 메일 발송(Gmail)',
+        ],
+      },
+      {
+        type: 'list',
+        items: [
+          '이전 일시 및 방법: 서비스를 이용하실 때 정보통신망을 통해 수시로 전송',
+          '보유·이용 기간: 3항의 보유 기간 동안, 또는 각 업체와의 이용 계약이 끝날 때까지',
+          '거부 방법: 국외 이전을 원하지 않으시면 고객센터로 알려 주세요. 다만 위 업체를 통해서만 서비스가 제공되므로, 거부하시면 로그인·결제·이용권 이용 등 서비스 이용이 어려울 수 있습니다.',
+        ],
+      },
+    ],
+  },
+  {
+    heading: '7. 정보주체의 권리·의무 및 행사 방법',
     blocks: [
       {
         type: 'p',
@@ -95,7 +122,7 @@ const sections: LegalSection[] = [
     ],
   },
   {
-    heading: '7. 개인정보의 파기',
+    heading: '8. 개인정보의 파기',
     blocks: [
       {
         type: 'p',
@@ -104,7 +131,7 @@ const sections: LegalSection[] = [
     ],
   },
   {
-    heading: '8. 개인정보의 안전성 확보 조치',
+    heading: '9. 개인정보의 안전성 확보 조치',
     blocks: [
       {
         type: 'p',
@@ -113,7 +140,7 @@ const sections: LegalSection[] = [
     ],
   },
   {
-    heading: '9. 개인정보 보호책임자',
+    heading: '10. 개인정보 보호책임자',
     blocks: [
       {
         type: 'list',
@@ -129,7 +156,7 @@ const sections: LegalSection[] = [
     ],
   },
   {
-    heading: '10. 개인정보처리방침의 변경',
+    heading: '11. 개인정보처리방침의 변경',
     blocks: [
       {
         type: 'p',
