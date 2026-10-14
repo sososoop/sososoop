@@ -35,7 +35,7 @@ export default function FaqList({ items }: { items: Item[] }) {
   );
   const [typed, setQuery] = useState<string | null>(null);
   const query = typed ?? urlQuery;
-  // 여러 낱말이면 모두 들어 있는 것만
+  // 낱말별로 나눠 찾는다(하나라도 걸리면 보여 줌)
   const words = query.trim().split(/\s+/).filter(Boolean).map(squash);
   const shown = words.length ? rank(items, words, (it) => squash(it.text)) : items;
 
@@ -56,8 +56,8 @@ export default function FaqList({ items }: { items: Item[] }) {
       )}
       <div className="flex flex-col">
         {shown.map(({ q, a }, i) => (
-          // 검색 중엔 가장 잘 맞는 답만 펼친다(key를 바꿔 새로 그림)
-          <details key={`${q}${words.length ? `:${query}` : ''}`} open={words.length > 0 && i === 0} className="group border-t border-hairline first:border-t-0">
+          // 검색 중엔 가장 잘 맞는 답만 펼친다(맨 위가 되거나 내려올 때 key를 바꿔 새로 그림)
+          <details key={`${q}${words.length && i === 0 ? ':top' : ''}`} open={words.length > 0 && i === 0} className="group border-t border-hairline first:border-t-0">
             <summary className="flex items-center justify-between gap-4 py-4 cursor-pointer list-none [&::-webkit-details-marker]:hidden text-[16px] font-extrabold text-cbt-ink [word-break:keep-all]">
               <span>
                 <span className="text-cbt-pop mr-2">Q.</span>

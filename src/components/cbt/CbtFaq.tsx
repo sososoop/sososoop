@@ -165,7 +165,7 @@ const FAQ: { q: string; k?: string; a: ReactNode }[] = [
           <A href={KAKAO}>고객센터</A>로 알려 주세요. 확인하는 대로 바로 열어 드려요.
         </li>
         <li>
-          &lsquo;다른 기기에 등록된 계정이에요&rsquo;가 뜨면 위의 &lsquo;기기를 바꾸고 싶어요&rsquo; 답을 봐 주세요.
+          &lsquo;다른 기기에 등록된 계정이에요&rsquo;가 뜨면 &lsquo;기기를 바꾸고 싶어요&rsquo; 질문의 답을 봐 주세요.
         </li>
       </ol>
     ),
