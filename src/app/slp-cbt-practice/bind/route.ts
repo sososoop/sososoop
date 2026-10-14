@@ -3,6 +3,9 @@
 // 들어올 때마다 새 번호로 바꾸고 옛 번호는 버린다(2026-09-30) → 번호를 복사해 다른 기기에 넣어도
 // 원래 기기가 한 번 더 들어오면 복사본은 쓸 수 없게 된다. /app 라우트는 이 쿠키가 DB 번호와 같은지 본다.
 // cbt_access.device_id 에 현재 번호를 둔다. bound_at(처음 등록한 때)은 바꾸지 않는다.
+// prev_device_id 에는 바꾸기 직전에 브라우저가 들고 있던 번호를 둔다(2026-10-14). 새 번호를 담은 응답이
+// 브라우저에 닿기 전에 창을 닫거나 연결이 끊기면 같은 기기가 막히던 문제 때문 — 새 번호로 앱이 한 번도
+// 안 열렸으면(prev_device_id가 남아 있으면) 직전 번호도 같은 기기로 본다. 앱이 새 번호로 열리면 /app이 비운다.
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
@@ -59,7 +62,7 @@ export async function POST(request: Request) {
 
   const { data: existing } = await admin
     .from('cbt_access')
-    .select('device_id')
+    .select('device_id, prev_device_id')
     .eq('user_id', user.id)
     .maybeSingle();
 
@@ -73,8 +76,11 @@ export async function POST(request: Request) {
   }
 
   const stored = existing.device_id as string;
+  const prev = (existing.prev_device_id as string | null) ?? '';
   const sameDevice =
     (!!cookieToken && cookieToken === stored) ||
+    // 새 번호가 브라우저에 안 닿았던 경우 — 직전 번호(아직 새 번호로 앱이 안 열림)
+    (!!cookieToken && cookieToken === prev) ||
     // 예전 방식 번호는 쿠키나 브라우저 저장값으로 한 번 확인해 주고, 곧바로 새 번호로 바꾼다
     (!stored.startsWith(TOKEN_PREFIX) && !!legacyId && legacyId === stored);
   if (!sameDevice) return NextResponse.json({ ok: false, reason: 'device' }, { status: 409 });
@@ -82,7 +88,8 @@ export async function POST(request: Request) {
   // 번호 바꾸기 — 방금 확인한 번호일 때만 바꾼다(그사이 다른 곳에서 바꿨으면 실패)
   const { data: rotated, error } = await admin
     .from('cbt_access')
-    .update({ device_id: token })
+    // 이번 응답도 못 받을 수 있으니, 브라우저가 지금 들고 있는 번호를 직전 번호로 남긴다
+    .update({ device_id: token, prev_device_id: cookieToken || null })
     .eq('user_id', user.id)
     .eq('device_id', stored)
     .select('user_id');

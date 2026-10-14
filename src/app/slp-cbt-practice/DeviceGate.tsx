@@ -38,6 +38,11 @@ export default function DeviceGate({ expiresOn }: { expiresOn: string | null }) 
   const [state, setState] = useState<State>('checking');
 
   useEffect(() => {
+    // 기기 확인 쿠키는 https에서만 오간다 → http://로 들어오면 같은 기기도 '다른 기기'로 막혔다(2026-10-14)
+    if (location.protocol === 'http:' && location.hostname !== 'localhost') {
+      location.replace(`https://${location.host}${location.pathname}${location.search}${location.hash}`);
+      return;
+    }
     let alive = true;
     (async () => {
       try {

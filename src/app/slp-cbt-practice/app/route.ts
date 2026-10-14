@@ -37,11 +37,19 @@ export async function GET(request: Request) {
     if (!admin) return NextResponse.redirect(new URL('/slp-cbt-practice', request.url));
     const { data: access } = await admin
       .from('cbt_access')
-      .select('device_id')
+      .select('device_id, prev_device_id')
       .eq('user_id', user.id)
       .maybeSingle();
     if (!devCookie || !access || access.device_id !== devCookie) {
       return NextResponse.redirect(new URL('/slp-cbt-practice', request.url));
+    }
+    // 새 번호가 브라우저에 잘 닿았다 → 직전 번호는 이제 인정하지 않는다(bind 참고)
+    if (access.prev_device_id) {
+      await admin
+        .from('cbt_access')
+        .update({ prev_device_id: null })
+        .eq('user_id', user.id)
+        .eq('device_id', devCookie);
     }
   }
 
