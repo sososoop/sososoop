@@ -2,8 +2,9 @@
 // 답은 실제 동작(이용기간·기기 제한·브라우저 저장·쿠폰)과 맞춰 두었다. 규칙을 바꾸면 여기도 같이 고친다.
 
 import Link from 'next/link';
-import type { ReactNode } from 'react';
+import { isValidElement, type ReactNode } from 'react';
 import { CBT_TRIAL_URL } from './CbtDetail';
+import FaqList from './FaqList';
 
 const KAKAO = 'http://pf.kakao.com/_gngTX';
 
@@ -14,9 +15,11 @@ const A = ({ href, children }: { href: string; children: ReactNode }) => (
 );
 const B = ({ children }: { children: ReactNode }) => <b className="font-extrabold text-cbt-ink">{children}</b>;
 
-const FAQ: { q: string; a: ReactNode }[] = [
+// k: 답에 없는 말로 찾을 때 걸리게 하는 검색어(띄어쓰기 없이 찾아도 걸린다)
+const FAQ: { q: string; k?: string; a: ReactNode }[] = [
   {
     q: '어디서 로그인하나요?',
+    k: '로그인 구글 카카오 계정 아이디 회원가입 구매 화면',
     a: (
       <>
         소소숲 사이트 오른쪽 위 <Link href="/login?next=/slp-cbt-practice" className="font-bold text-cbt-pop underline">로그인</Link>에서
@@ -27,6 +30,7 @@ const FAQ: { q: string; a: ReactNode }[] = [
   },
   {
     q: '무료 체험과 정식 이용권은 뭐가 다른가요?',
+    k: '체험판 무료 맛보기 차이 가격',
     a: (
       <>
         <A href={CBT_TRIAL_URL}>무료 체험</A>은 로그인·결제 없이 1급 20문항을 해설까지 풀어 볼 수 있어요. 정식 이용권은{' '}
@@ -36,6 +40,7 @@ const FAQ: { q: string; a: ReactNode }[] = [
   },
   {
     q: '이용기간 3개월은 언제부터인가요?',
+    k: '기간 만료 끝나는 날 언제까지 유효기간',
     a: (
       <>
         <B>결제한 날부터 3개월 뒤 같은 날 밤 11시 59분까지</B>예요. 그달에 같은 날짜가 없으면 그달 마지막 날까지예요
@@ -46,10 +51,12 @@ const FAQ: { q: string; a: ReactNode }[] = [
   },
   {
     q: '몇 번까지 응시할 수 있나요?',
+    k: '횟수 제한 반복 다시 풀기 재응시',
     a: <>횟수 제한이 없어요. 이용기간 안에서는 같은 회차도 <B>몇 번이든 다시</B> 풀 수 있어요.</>,
   },
   {
     q: 'PC·노트북에서만 사용해야 하나요?',
+    k: '모바일 휴대폰 핸드폰 아이폰 갤럭시 태블릿 아이패드 맥북',
     a: (
       <>
         네. 실제 국가시험이 컴퓨터로 치러지기 때문에 PC 화면 기준으로 만들었어요. 휴대폰이나 세로로 든 태블릿에서는
@@ -59,7 +66,27 @@ const FAQ: { q: string; a: ReactNode }[] = [
     ),
   },
   {
+    q: '‘다른 기기에 등록된 계정이에요’가 떠요. 기기를 바꾸고 싶어요.',
+    k: '기기 초기화 기기변경 기기 변경 등록 해제 노트북 바꿈 바꿨 바꾼 바꿔 새 컴퓨터 접속 안 됨 막힘 차단 크롬 엣지 사파리 시크릿',
+    a: (
+      <>
+        이용권은 <B>처음 연 기기의 브라우저 한 곳</B>에만 등록돼요. 아래 경우에 이 안내가 떠요.
+        <ul className="mt-2 flex flex-col gap-1 list-disc pl-5">
+          <li>다른 컴퓨터·노트북에서 들어왔을 때</li>
+          <li>같은 컴퓨터라도 다른 브라우저(예: 크롬 → 엣지)나 시크릿 창으로 들어왔을 때</li>
+          <li>브라우저의 쿠키·사이트 데이터를 지웠을 때</li>
+        </ul>
+        <span className="block mt-2">
+          처음 쓰던 기기·브라우저로 들어가면 그대로 이용할 수 있어요. 기기를 바꿔야 하면 <A href={KAKAO}>고객센터</A>로{' '}
+          <B>로그인한 계정(구글/카카오, 이메일)</B>을 알려 주세요. 기기 등록을 초기화해 드리면, 그다음에 처음 들어오는 기기가 새로
+          등록돼요. 이전 기기에 있던 응시 기록과 오답노트는 새 기기로 옮겨지지 않아요.
+        </span>
+      </>
+    ),
+  },
+  {
     q: '답안이 저장되나요?',
+    k: '저장 기록 사라짐 날아감 초기화',
     a: (
       <>
         네. 풀던 답은 <B>지금 쓰는 기기의 브라우저에 자동 저장</B>돼요. 서버가 아니라 브라우저에 저장되기 때문에, 기기를
@@ -69,6 +96,7 @@ const FAQ: { q: string; a: ReactNode }[] = [
   },
   {
     q: '창을 닫아도 이어서 풀 수 있나요?',
+    k: '이어풀기 중단 나갔다 타이머 시간',
     a: (
       <>
         네. 다시 들어오면 <B>&lsquo;이어서 풀기&rsquo;</B> 안내가 떠요. 창을 닫아 둔 동안에는 시간이 흐르지 않아서 남은 시간
@@ -78,6 +106,7 @@ const FAQ: { q: string; a: ReactNode }[] = [
   },
   {
     q: '오답노트는 어떻게 쌓이나요?',
+    k: '오답 틀린 문제 영역별 약점 복습',
     a: (
       <>
         교시를 제출해 채점되면 <B>틀리거나 비워 둔 문항이 자동으로</B> 오답노트에 담겨요. 회차가 달라도 계속 쌓이고,
@@ -88,6 +117,7 @@ const FAQ: { q: string; a: ReactNode }[] = [
   },
   {
     q: '해설은 어디서 보나요?',
+    k: '해설 정답 풀이 상세해설 인쇄 PDF 출력',
     a: (
       <>
         교시를 제출하면 나오는 결과 화면에서 <B>&lsquo;틀린 문제만 보기&rsquo; 또는 &lsquo;전체 해설 보기&rsquo;</B>를 누르고,
@@ -98,6 +128,7 @@ const FAQ: { q: string; a: ReactNode }[] = [
   },
   {
     q: '쿠폰은 어떻게 적용하나요?',
+    k: '쿠폰 할인 코드 적용 안 됨',
     a: (
       <>
         결제 화면의 <B>쿠폰 칸에 코드를 넣고 적용</B>하면 할인된 금액이 바로 보여요. 쿠폰은 모의 CBT 이용권에만 쓸 수 있고
@@ -107,6 +138,7 @@ const FAQ: { q: string; a: ReactNode }[] = [
   },
   {
     q: '재도전 1년 무료연장은 어떻게 신청하나요?',
+    k: '불합격 떨어짐 연장 재시험 내년 1년',
     a: (
       <>
         이번 시험에서 원하는 결과를 얻지 못했다면 합격자 발표일(12월 23일)부터 <B>1월 23일까지</B> 신청해 주세요.
@@ -123,6 +155,7 @@ const FAQ: { q: string; a: ReactNode }[] = [
   },
   {
     q: '결제했는데 이용이 안 돼요.',
+    k: '결제 오류 안 열림 무통장 입금 계좌이체 주문번호 환불',
     a: (
       <ol className="flex flex-col gap-1 list-decimal pl-5">
         <li>구매한 계정과 지금 로그인한 계정이 같은지 먼저 확인해 주세요.</li>
@@ -132,14 +165,14 @@ const FAQ: { q: string; a: ReactNode }[] = [
           <A href={KAKAO}>고객센터</A>로 알려 주세요. 확인하는 대로 바로 열어 드려요.
         </li>
         <li>
-          &lsquo;다른 기기에 등록된 계정이에요&rsquo;가 뜨면 다른 기기·브라우저로 들어왔거나 쿠키를 지운 경우예요. 고객센터로
-          알려 주시면 기기 등록을 다시 해 드려요.
+          &lsquo;다른 기기에 등록된 계정이에요&rsquo;가 뜨면 위의 &lsquo;기기를 바꾸고 싶어요&rsquo; 답을 봐 주세요.
         </li>
       </ol>
     ),
   },
   {
     q: '오류가 생겼을 때 어떤 정보를 보내야 하나요?',
+    k: '오류 버그 에러 문의 신고 문항 오류 제보',
     a: (
       <>
         <A href={KAKAO}>고객센터</A>로 아래 내용을 보내 주시면 빠르게 확인할 수 있어요.
@@ -156,32 +189,24 @@ const FAQ: { q: string; a: ReactNode }[] = [
   },
 ];
 
+// 검색용 글자 — 답(JSX) 안의 글자를 모은다(링크·굵은 글씨 안쪽까지)
+function nodeText(node: ReactNode): string {
+  if (node == null || typeof node === 'boolean') return '';
+  if (typeof node === 'string' || typeof node === 'number') return String(node);
+  if (Array.isArray(node)) return node.map(nodeText).join(' ');
+  if (isValidElement(node)) return nodeText((node.props as { children?: ReactNode }).children);
+  return '';
+}
+
 // standalone: /slp-cbt-practice/faq 처럼 FAQ만 단독으로 보여 줄 때(위 여백 추가)
 export default function CbtFaq({ standalone = false }: { standalone?: boolean }) {
+  const items = FAQ.map(({ q, k, a }) => ({ q, a, text: `${q} ${k ?? ''} ${nodeText(a)}` }));
   return (
     <section id="faq" className={`bg-parchment px-6 pb-14 ${standalone ? 'pt-10 md:pt-14 min-h-[70vh]' : ''}`}>
       <div className="max-w-[1120px] mx-auto">
         <div className="bg-white border-2 border-cbt-ink p-6 md:p-8">
-          <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 mb-4">
-            <h2 className="text-[21px] font-black">자주 묻는 질문</h2>
-            <Link href="/slp-cbt-practice/guide" className="text-[14px] font-bold text-cbt-pop underline">
-              화면으로 보는 사용설명서 →
-            </Link>
-          </div>
-          <div className="flex flex-col">
-            {FAQ.map(({ q, a }) => (
-              <details key={q} className="group border-t border-hairline first:border-t-0">
-                <summary className="flex items-center justify-between gap-4 py-4 cursor-pointer list-none [&::-webkit-details-marker]:hidden text-[16px] font-extrabold text-cbt-ink [word-break:keep-all]">
-                  <span>
-                    <span className="text-cbt-pop mr-2">Q.</span>
-                    {q}
-                  </span>
-                  <span className="flex-none text-cbt-gray transition-transform group-open:rotate-45 text-[20px] leading-none">+</span>
-                </summary>
-                <div className="pb-5 pl-7 text-[15px] text-ink-muted leading-relaxed [word-break:keep-all]">{a}</div>
-              </details>
-            ))}
-          </div>
+          <h2 className="text-[21px] font-black mb-4">자주 묻는 질문</h2>
+          <FaqList items={items} />
         </div>
       </div>
     </section>
