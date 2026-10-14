@@ -21,6 +21,10 @@ export default function MemberDetailView({ detail }: { detail: MemberDetail }) {
 
   const info = [
     { label: '이메일', value: member.email || '(이메일 없음)' },
+    {
+      label: '휴대폰',
+      value: member.phone ? `${member.phone}${member.smsNews ? ' · 새 소식 문자 동의' : ''}` : '(없음)',
+    },
     { label: '로그인 방식', value: providerLabel(member.providers) },
     { label: '가입일', value: formatDateTime(member.createdAt) },
     { label: '마지막 접속', value: formatDateTime(member.lastSignInAt) },

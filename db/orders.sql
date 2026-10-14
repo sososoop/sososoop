@@ -17,6 +17,11 @@ create table if not exists public.orders (
 alter table public.orders add column if not exists user_id uuid;
 create index if not exists orders_user_id_idx on public.orders (user_id);
 
+-- 모의 CBT 이용권 결제 때 받는 휴대폰 번호와 동의 시각(2026-10-14~). 다른 상품 주문은 비어 있다.
+alter table public.orders add column if not exists phone text;                       -- 010-1234-5678
+alter table public.orders add column if not exists phone_agreed_at timestamptz;      -- [필수] 수집·이용 동의 시각
+alter table public.orders add column if not exists marketing_agreed_at timestamptz;  -- [선택] 새 소식 문자 동의 시각(동의 안 하면 null)
+
 alter table public.orders enable row level security;
 
 -- ★보안: 주문 삽입/조회는 서버가 service_role 키로만 수행한다(RLS 우회).

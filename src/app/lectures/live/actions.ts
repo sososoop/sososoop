@@ -4,6 +4,7 @@
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { normalizePhone, PHONE_ERROR } from '@/lib/phone';
 import { getFreeLive, isBeforeStart, isLiveOpen, isSeatsClosed } from '@/data/freeLives';
 
 export type ApplyState = { ok: boolean; message: string };
@@ -24,7 +25,7 @@ export async function applyFreeLive(_prev: ApplyState, formData: FormData): Prom
   if (!user) return { ok: false, message: '로그인한 뒤 신청해 주세요.' };
 
   const name = text(formData, 'name', 40);
-  const phone = text(formData, 'phone', 20).replace(/[^0-9]/g, '');
+  const phone = normalizePhone(text(formData, 'phone', 20));
   const examPick = text(formData, 'exam', 20);
   const worries = formData
     .getAll('worries')
@@ -35,7 +36,7 @@ export async function applyFreeLive(_prev: ApplyState, formData: FormData): Prom
   const offline = text(formData, 'offline', 40);
 
   if (!name) return { ok: false, message: '이름을 적어 주세요.' };
-  if (!/^01[0-9]{8,9}$/.test(phone)) return { ok: false, message: '휴대폰 번호를 다시 확인해 주세요. (예: 010-1234-5678)' };
+  if (!phone) return { ok: false, message: PHONE_ERROR };
   if (!live.examOptions.includes(examPick)) return { ok: false, message: '준비 중인 시험을 골라 주세요.' };
   const replay = isSeatsClosed(live);
   if (formData.get('attend') !== 'yes')
@@ -50,7 +51,7 @@ export async function applyFreeLive(_prev: ApplyState, formData: FormData): Prom
     user_id: user.id,
     email: user.email ?? null,
     name,
-    phone: phone.replace(/^(\d{3})(\d{3,4})(\d{4})$/, '$1-$2-$3'),
+    phone,
     exam: examPick,
     worries: worryOther ? [...worries, `기타: ${worryOther}`] : worries,
     question,

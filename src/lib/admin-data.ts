@@ -20,6 +20,8 @@ export type OrderRow = {
   amount: number | null;
   status: string | null;
   created_at: string;
+  phone?: string | null; // 모의 CBT 결제 때 받은 휴대폰 번호
+  marketing_agreed_at?: string | null; // [선택] 새 소식 문자 동의 시각
 };
 
 export type GrantRow = {
@@ -54,6 +56,9 @@ export type MemberSummary = {
   orderCount: number;
   waitingDeposit: number;
   cbtDeviceBound: boolean;
+  // 가장 최근 결제에 남긴 휴대폰 번호와, 그 결제 때 새 소식 문자에 동의했는지
+  phone: string | null;
+  smsNews: boolean;
 };
 
 export type MemberDetail = {
@@ -83,6 +88,9 @@ export function summarizeMember(
   productIds: Record<EntitlementAlias, string[]>,
 ): MemberSummary {
   const done = orders.filter((o) => o.status === 'DONE');
+  const withPhone = done
+    .filter((o) => o.phone)
+    .sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
 
   const entitlements = {} as Record<EntitlementAlias, EntitlementSource[]>;
   const expiresAt = {} as Record<EntitlementAlias, string | null>;
@@ -121,6 +129,8 @@ export function summarizeMember(
     orderCount: orders.length,
     waitingDeposit: orders.filter((o) => o.status === 'WAITING_FOR_DEPOSIT').length,
     cbtDeviceBound: Boolean(access),
+    phone: withPhone?.phone ?? null,
+    smsNews: Boolean(withPhone?.marketing_agreed_at),
   };
 }
 

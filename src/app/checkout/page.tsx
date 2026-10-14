@@ -1,9 +1,10 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { periodLabelFor, resolveOrder } from '@/lib/products';
+import { isCbtProduct, periodLabelFor, resolveOrder } from '@/lib/products';
 import { createClient } from '@/lib/supabase/server';
 import { applyCoupon } from '@/lib/coupons';
 import { isAdmin } from '@/lib/admin';
+import { createAdminClient } from '@/lib/supabase/admin';
 import CheckoutClient from './CheckoutClient';
 
 // 로그인 세션을 매 요청 확인해야 하므로 정적 캐시하지 않는다.
@@ -53,6 +54,10 @@ export default async function CheckoutPage({
   // 쿠폰: 서버가 할인액을 계산한다. 결제 직전 주문을 저장할 때 같은 계산을 한 번 더 한다.
   const applied = coupon ? await applyCoupon(order, coupon) : null;
 
+  // 모의 CBT 이용권이 든 주문만 휴대폰 번호를 받는다(이용 안내 문자용). 전에 남긴 번호가 있으면 미리 채운다.
+  const needPhone = (await Promise.all(order.items.map((it) => isCbtProduct(it.id)))).some(Boolean);
+  const savedPhone = needPhone ? await lastPhone(user.id) : '';
+
   return (
     <CheckoutClient
       baseQuery={query}
@@ -60,6 +65,8 @@ export default async function CheckoutPage({
       couponError={applied && !applied.ok ? applied.message : ''}
       couponInput={coupon ?? ''}
       adminTest={isAdmin(user)}
+      needPhone={needPhone}
+      savedPhone={savedPhone}
       order={{
         orderName: order.orderName,
         amount: applied?.ok ? applied.total : order.total,
@@ -74,4 +81,27 @@ export default async function CheckoutPage({
       }}
     />
   );
+}
+
+// 이 회원이 전에 남긴 휴대폰 번호: 최근 주문 → 무료 LIVE 신청 순으로 찾는다.
+async function lastPhone(userId: string): Promise<string> {
+  const db = createAdminClient();
+  if (!db) return '';
+  const { data: order } = await db
+    .from('orders')
+    .select('phone')
+    .eq('user_id', userId)
+    .not('phone', 'is', null)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (order?.phone) return order.phone;
+  const { data: live } = await db
+    .from('free_live_registrations')
+    .select('phone')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return live?.phone ?? '';
 }

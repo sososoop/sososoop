@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { loadTossPayments, ANONYMOUS } from '@tosspayments/tosspayments-sdk';
 import { ADMIN_TEST_PAYMENT_KEY } from '@/lib/test-order';
+import { normalizePhone, PHONE_ERROR } from '@/lib/phone';
+import { PHONE_CONSENT_MARKETING, PHONE_CONSENT_REQUIRED } from '@/data/purchaseConsent';
 import { prepareOrder } from './actions';
 
 const CLIENT_KEY = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY;
@@ -38,6 +40,8 @@ export default function CheckoutClient({
   couponError,
   couponInput,
   adminTest,
+  needPhone,
+  savedPhone,
 }: {
   order: Order;
   baseQuery: string; // 쿠폰을 뺀 주문 쿼리
@@ -45,6 +49,8 @@ export default function CheckoutClient({
   couponError: string;
   couponInput: string;
   adminTest: boolean; // 관리자 로그인이면 실제 결제 없이 완료 화면으로 가는 테스트 버튼을 보여 준다
+  needPhone: boolean; // 모의 CBT 이용권이 든 주문이면 휴대폰 번호와 수집 동의를 받는다
+  savedPhone: string; // 전에 남긴 번호(미리 채움)
 }) {
   const router = useRouter();
   const [code, setCode] = useState(coupon?.code ?? couponInput);
@@ -52,6 +58,9 @@ export default function CheckoutClient({
   const [selected, setSelected] = useState<MethodKey>('CARD');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [phone, setPhone] = useState(savedPhone);
+  const [phoneAgreed, setPhoneAgreed] = useState(false);
+  const [marketingAgreed, setMarketingAgreed] = useState(false);
 
   // 쿠폰 적용·해제는 같은 결제 화면을 다시 불러 서버가 금액을 계산하게 한다.
   function applyCode() {
@@ -69,7 +78,14 @@ export default function CheckoutClient({
 
   // 결제창을 열기 전에 서버에 주문(구매자·상품·최종 금액·쿠폰)을 먼저 저장한다.
   async function prepare(adminTest = false) {
-    const prepared = await prepareOrder({ ids: order.ids, coupon: coupon?.code, adminTest });
+    if (needPhone && !normalizePhone(phone)) throw new Error(PHONE_ERROR);
+    if (needPhone && !phoneAgreed) throw new Error('휴대폰 번호 수집·이용에 동의해 주세요.');
+    const prepared = await prepareOrder({
+      ids: order.ids,
+      coupon: coupon?.code,
+      adminTest,
+      ...(needPhone ? { phone, phoneAgreed, marketingAgreed } : {}),
+    });
     if (!prepared.ok) throw new Error(prepared.message);
     return prepared;
   }
@@ -215,6 +231,42 @@ export default function CheckoutClient({
           </div>
         )}
 
+        {/* 휴대폰 번호: 모의 CBT 이용권이 든 주문만 */}
+        {needPhone && (
+          <div className="mb-5">
+            <label htmlFor="buyer-phone" className="block text-[13px] font-semibold text-ink mb-2.5 px-1">
+              휴대폰 번호 <span className="text-red-600">*</span>
+            </label>
+            <input
+              id="buyer-phone"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              inputMode="tel"
+              autoComplete="tel"
+              placeholder="010-1234-5678"
+              aria-describedby="buyer-phone-why"
+              className="w-full px-4 py-3 rounded-[14px] border border-hairline bg-pearl text-[14.5px] outline-none focus:border-primary"
+            />
+            <p id="buyer-phone-why" className="text-[12px] text-ink-muted leading-relaxed mt-2 px-1">
+              구매 자료·회차가 추가되거나 이용에 꼭 필요한 일이 있을 때 문자로 알려 드려요.
+            </p>
+            <div className="mt-3 flex flex-col gap-2.5 px-4 py-3.5 rounded-[14px] border border-hairline bg-pearl">
+              <ConsentCheck
+                checked={phoneAgreed}
+                onChange={setPhoneAgreed}
+                title={PHONE_CONSENT_REQUIRED.title}
+                items={PHONE_CONSENT_REQUIRED.items}
+              />
+              <ConsentCheck
+                checked={marketingAgreed}
+                onChange={setMarketingAgreed}
+                title={PHONE_CONSENT_MARKETING.title}
+                items={PHONE_CONSENT_MARKETING.items}
+              />
+            </div>
+          </div>
+        )}
+
         {/* 결제수단 선택 */}
         <p className="text-[13px] font-semibold text-ink mb-2.5 px-1">결제수단</p>
         <div className="flex flex-col gap-2.5 mb-5">
@@ -294,5 +346,38 @@ export default function CheckoutClient({
         </Link>
       </div>
     </main>
+  );
+}
+
+function ConsentCheck({
+  checked,
+  onChange,
+  title,
+  items,
+}: {
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  title: string;
+  items: string[];
+}) {
+  return (
+    <label className="flex items-start gap-2.5 cursor-pointer">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="mt-0.5 w-[18px] h-[18px] accent-primary shrink-0"
+      />
+      <span className="text-[13.5px] font-semibold text-ink leading-snug">
+        {title}
+        <span className="block mt-1 text-[12px] font-normal text-ink-muted leading-relaxed">
+          {items.map((it) => (
+            <span key={it} className="block">
+              · {it}
+            </span>
+          ))}
+        </span>
+      </span>
+    </label>
   );
 }
