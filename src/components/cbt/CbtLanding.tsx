@@ -77,7 +77,7 @@ export default function CbtLanding({ state, expiredOn, periodLabel, perk, notes,
                 ⏰ 이용기간이 {expiredOn}에 끝났어요. 이용권을 다시 구매하면 바로 이어서 이용할 수 있어요.
               </p>
             ) : (
-              <p className="mt-4 text-[13px] text-cbt-gray">🔒 이용권을 구매한 소소숲 회원만 이용할 수 있는 유료 서비스입니다 · 이용기간 {periodLabel}</p>
+              <p className="mt-4 text-[13px] text-cbt-gray">이용권 구매 후 이용할 수 있는 유료 서비스예요 · 이용기간 {periodLabel}</p>
             )}
             <p className="mt-1 text-[13px] text-cbt-gray">{perk}</p>
           </div>
