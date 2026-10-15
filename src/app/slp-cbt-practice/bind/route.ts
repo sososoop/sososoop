@@ -12,26 +12,27 @@ import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { isAdmin } from '@/lib/admin';
 import { hasCbtEntitlement } from '@/lib/entitlements';
+import {
+  CBT_DEVICE_COOKIE,
+  DEVICE_TOKEN_PREFIX,
+  newDeviceToken,
+  nextDeviceMoveAt,
+  setDeviceCookie,
+} from '@/lib/cbt-device';
 
 export const dynamic = 'force-dynamic';
 
-const COOKIE = 'slp_cbt_dev';
-const TOKEN_PREFIX = 't_'; // 서버가 만든 번호. 이게 아니면 예전 방식(브라우저가 만든 기기 ID)이다.
-
-function newToken() {
-  return TOKEN_PREFIX + crypto.randomUUID().replace(/-/g, '');
+function withCookie(token: string) {
+  return setDeviceCookie(NextResponse.json({ ok: true }), token);
 }
 
-function withCookie(token: string) {
-  const res = NextResponse.json({ ok: true });
-  res.cookies.set(COOKIE, token, {
-    httpOnly: true,
-    secure: true,
-    sameSite: 'lax',
-    path: '/slp-cbt-practice',
-    maxAge: 60 * 60 * 24 * 365,
-  });
-  return res;
+// 다른 기기 → 409. 언제부터 이 기기로 직접 옮길 수 있는지(null = 지금)도 알려 준다(move 라우트 참고).
+function otherDevice(movedAt: string | null | undefined) {
+  const next = nextDeviceMoveAt(movedAt);
+  return NextResponse.json(
+    { ok: false, reason: 'device', nextMoveAt: next ? next.toISOString() : null },
+    { status: 409 },
+  );
 }
 
 export async function POST(request: Request) {
@@ -55,18 +56,18 @@ export async function POST(request: Request) {
   } catch {
     // no-op
   }
-  const cookieToken = (await cookies()).get(COOKIE)?.value ?? '';
+  const cookieToken = (await cookies()).get(CBT_DEVICE_COOKIE)?.value ?? '';
 
   const admin = createAdminClient();
   if (!admin) return NextResponse.json({ ok: false, reason: 'server' }, { status: 500 });
 
   const { data: existing } = await admin
     .from('cbt_access')
-    .select('device_id, prev_device_id')
+    .select('device_id, prev_device_id, moved_at')
     .eq('user_id', user.id)
     .maybeSingle();
 
-  const token = newToken();
+  const token = newDeviceToken();
 
   if (!existing) {
     // 처음 들어옴 → 이 기기를 등록
@@ -82,8 +83,8 @@ export async function POST(request: Request) {
     // 새 번호가 브라우저에 안 닿았던 경우 — 직전 번호(아직 새 번호로 앱이 안 열림)
     (!!cookieToken && cookieToken === prev) ||
     // 예전 방식 번호는 쿠키나 브라우저 저장값으로 한 번 확인해 주고, 곧바로 새 번호로 바꾼다
-    (!stored.startsWith(TOKEN_PREFIX) && !!legacyId && legacyId === stored);
-  if (!sameDevice) return NextResponse.json({ ok: false, reason: 'device' }, { status: 409 });
+    (!stored.startsWith(DEVICE_TOKEN_PREFIX) && !!legacyId && legacyId === stored);
+  if (!sameDevice) return otherDevice(existing.moved_at as string | null);
 
   // 번호 바꾸기 — 방금 확인한 번호일 때만 바꾼다(그사이 다른 곳에서 바꿨으면 실패)
   const { data: rotated, error } = await admin
@@ -94,8 +95,6 @@ export async function POST(request: Request) {
     .eq('device_id', stored)
     .select('user_id');
   if (error) return NextResponse.json({ ok: false, reason: 'server' }, { status: 500 });
-  if (!rotated || rotated.length === 0) {
-    return NextResponse.json({ ok: false, reason: 'device' }, { status: 409 });
-  }
+  if (!rotated || rotated.length === 0) return otherDevice(existing.moved_at as string | null);
   return withCookie(token);
 }

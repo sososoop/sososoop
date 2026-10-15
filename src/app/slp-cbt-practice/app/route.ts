@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { isAdmin } from '@/lib/admin';
 import { hasCbtEntitlement } from '@/lib/entitlements';
+import { CBT_DEVICE_COOKIE } from '@/lib/cbt-device';
 import appHtml from '../app-html.json';
 
 export const dynamic = 'force-dynamic';
@@ -32,7 +33,7 @@ export async function GET(request: Request) {
   // 기기 확인 — 바인딩 쿠키가 DB에 등록된 기기와 일치해야 함(직접 접근 시 게이트로 회귀)
   if (!adminUser) {
     const cookieStore = await cookies();
-    const devCookie = cookieStore.get('slp_cbt_dev')?.value;
+    const devCookie = cookieStore.get(CBT_DEVICE_COOKIE)?.value;
     const admin = createAdminClient();
     if (!admin) return NextResponse.redirect(new URL('/slp-cbt-practice', request.url));
     const { data: access } = await admin

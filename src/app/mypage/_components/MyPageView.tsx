@@ -13,6 +13,7 @@ type PassCard = {
   detail: string;
   href: string;
   action: string;
+  note?: string; // 카드 아래 작은 안내(모의 CBT 등록 기기)
 };
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
@@ -254,6 +255,16 @@ const DOWNLOAD_NOTICES: Record<string, string> = {
   error: '파일을 준비하지 못했어요. 잠시 뒤 다시 눌러 주세요.',
 };
 
+// 모의 CBT 등록 기기 안내 — 기기는 새 기기에서 CBT를 열어 [이 기기로 옮기기]로 바꾼다(14일에 한 번)
+function cbtDeviceNote(device: MyPageData['cbtDevice']): string {
+  if (!device) return '등록된 기기 없음 · 처음 여는 PC가 이용 기기로 등록돼요.';
+  const since = device.registeredAt ? `${formatKoreanDate(new Date(device.registeredAt))}부터 ` : '';
+  const move = device.nextMoveAt
+    ? `${formatKoreanDate(new Date(device.nextMoveAt))}부터 다른 기기로 옮길 수 있어요.`
+    : '다른 기기로 옮기려면 그 기기에서 CBT를 열고 [이 기기로 옮기기]를 누르세요.';
+  return `기기 1대 등록됨(${since}이용 중) · ${move}`;
+}
+
 export default function MyPageView({ data, download }: { data: MyPageData; download?: string }) {
   const notice = download ? DOWNLOAD_NOTICES[download] : undefined;
   const provider = providerLabel(data.providers);
@@ -266,6 +277,7 @@ export default function MyPageView({ data, download }: { data: MyPageData; downl
           detail: data.cbt.expiresAt ? `${formatKoreanDate(data.cbt.expiresAt)}까지` : '이용할 수 있어요',
           href: '/slp-cbt-practice',
           action: 'CBT 연습앱 열기',
+          note: cbtDeviceNote(data.cbtDevice),
         }
       : data.cbt.expiresAt
         ? {
@@ -367,6 +379,7 @@ export default function MyPageView({ data, download }: { data: MyPageData; downl
                   <PassBadge state={pass.state} />
                 </div>
                 <p className="text-[13.5px] text-ink-muted">{pass.detail}</p>
+                {pass.note && <p className="text-[12.5px] text-ink-light leading-relaxed">{pass.note}</p>}
                 <Link
                   href={pass.href}
                   className={`mt-auto text-center py-2.5 rounded-full text-[13.5px] font-semibold transition-colors ${

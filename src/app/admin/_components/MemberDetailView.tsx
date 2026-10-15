@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { ENTITLEMENT_PRODUCTS, isEntitlementActive } from '@/lib/entitlements';
 import { formatKoreanDate } from '@/lib/period';
+import { nextDeviceMoveAt } from '@/lib/cbt-device';
 import type { MemberDetail } from '@/lib/admin-data';
 import { changeOrderStatus, grantEntitlement, resetCbtDevice, revokeGrant } from '../actions';
 import ConfirmSubmit from './ConfirmSubmit';
@@ -18,6 +19,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 export default function MemberDetailView({ detail }: { detail: MemberDetail }) {
   const { member, orders, grants, access, grantsTableReady } = detail;
+  const nextMove = nextDeviceMoveAt(access?.moved_at);
 
   const info = [
     { label: '이메일', value: member.email || '(이메일 없음)' },
@@ -125,12 +127,18 @@ export default function MemberDetailView({ detail }: { detail: MemberDetail }) {
               <p className="flex-1 min-w-[200px] text-[14px] text-ink-muted">
                 {formatDateTime(access.bound_at)}에 등록된 기기 1대
                 <span className="ml-2 text-[12px] text-ink-light">({access.device_id.slice(0, 8)}…)</span>
+                {access.moved_at && (
+                  <span className="block mt-1 text-[13px]">
+                    회원이 직접 옮김: {formatDateTime(access.moved_at)}
+                    {nextMove ? ` · 다음 직접 변경 ${formatKoreanDate(nextMove)}부터` : ' · 지금 직접 옮길 수 있음'}
+                  </span>
+                )}
               </p>
               <form action={resetCbtDevice}>
                 <input type="hidden" name="userId" value={member.id} />
                 <ConfirmSubmit
                   tone="danger"
-                  message={`${member.name}님의 CBT 기기 등록을 초기화할까요?\n다음에 접속하는 기기가 새로 등록됩니다.`}
+                  message={`${member.name}님의 CBT 기기 등록을 초기화할까요?\n다음에 접속하는 기기가 새로 등록되고, 14일 변경 제한도 풀립니다.`}
                 >
                   기기 초기화
                 </ConfirmSubmit>

@@ -5,6 +5,7 @@ import { getPurchasable } from '@/lib/products';
 import { getResourcesCached } from '@/lib/notion';
 import { downloadUntil, paidFilesFor } from '@/lib/paid-files';
 import { getMyLives, type MyLive } from '@/lib/free-lives';
+import { nextDeviceMoveAt } from '@/lib/cbt-device';
 import {
   entitlementProductIds,
   getCbtEntitlement,
@@ -42,6 +43,8 @@ export type MyPageData = {
   providers: string[];
   createdAt: string;
   cbt: EntitlementStatus;
+  // 모의 CBT 등록 기기 — 등록된 기기가 없으면 null. registeredAt: 지금 기기를 등록한(옮긴) 때. nextMoveAt: 다음에 직접 옮길 수 있는 때(null = 지금)
+  cbtDevice: { registeredAt: string | null; nextMoveAt: string | null } | null;
   hangul: boolean;
   orders: MyOrder[];
   lives: MyLive[]; // 신청한 무료 LIVE(ZOOM 링크 포함)
@@ -110,6 +113,11 @@ export async function getMyPageData(user: User): Promise<MyPageData> {
       : null,
     getMyLives(user.id),
   ]);
+  const device =
+    admin && cbt.ok
+      ? await admin.from('cbt_access').select('bound_at, moved_at').eq('user_id', user.id).maybeSingle()
+      : null;
+  const deviceRow = device && !device.error ? device.data : null;
 
   const rows = orders && !orders.error ? (orders.data ?? []) : [];
   // 유료 자료의 링크URL(Notion) — 산 사람에게만 마이페이지에서 보여 준다.
@@ -135,6 +143,13 @@ export async function getMyPageData(user: User): Promise<MyPageData> {
     providers: memberProviders(user),
     createdAt: user.created_at,
     cbt,
+    cbtDevice: deviceRow
+      ? {
+          // bound_at은 처음 등록한 때라 옮긴 뒤엔 moved_at이 지금 기기의 등록일
+          registeredAt: ((deviceRow.moved_at ?? deviceRow.bound_at) as string | null) ?? null,
+          nextMoveAt: nextDeviceMoveAt(deviceRow.moved_at as string | null)?.toISOString() ?? null,
+        }
+      : null,
     hangul,
     orders: myOrders,
     lives,

@@ -37,6 +37,7 @@ export type AccessRow = {
   user_id: string;
   device_id: string;
   bound_at: string | null;
+  moved_at?: string | null; // 회원이 [이 기기로 옮기기]로 직접 옮긴 때(2026-10-15 칸 추가)
 };
 
 // 'paid' = 결제로 보유, 'granted' = 관리자 지급으로 보유. 빈 배열이면 이용권 없음.
