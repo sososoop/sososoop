@@ -13,6 +13,18 @@ const nextConfig: NextConfig = {
   },
   // https로 한 번 들어온 브라우저는 앞으로 http:// 주소도 https로 연다(HSTS).
   // http로 열리면 로그인·기기 확인 쿠키(secure)가 안 실려 CBT가 '다른 기기'로 막혔다(2026-10-14).
+  // 무료 PDF 파일 이름을 바꿨다(2026-10-15) — 예전 주소로 공유된 링크는 새 파일로 보낸다.
+  async redirects() {
+    const moved: [string, string][] = [
+      ['언어치료·특수교육 AI 활용 프롬프트 50_무료공유_이루다쌤.pdf', '언어치료·특수교육 AI 활용 프롬프트 50_소소숲.pdf'],
+      ['유창성장애_출제경향_이루다쌤.pdf', '유창성장애_출제경향_소소숲.pdf'],
+    ];
+    return moved.map(([from, to]) => ({
+      source: `/files/${encodeURIComponent(from)}`,
+      destination: `/files/${encodeURIComponent(to)}`,
+      permanent: true,
+    }));
+  },
   async headers() {
     return [
       {
