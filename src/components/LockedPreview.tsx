@@ -104,7 +104,7 @@ export default function LockedPreview({
             </p>
           ) : (
             <p className="mt-4 text-[13px] text-on-dark/50">
-              🔒 이용권을 구매한 소소숲 회원만 이용할 수 있는 유료 서비스입니다.
+              이용권 구매 후 이용할 수 있는 유료 서비스예요.
             </p>
           )}
           {perk && <p className="mt-1.5 text-[13px] text-on-dark/70">{perk}</p>}
