@@ -153,8 +153,6 @@ export default function DeviceGate({ expiresOn }: { expiresOn: string | null }) 
           </p>
           <p className="mt-4 text-[12.5px] text-ink-light leading-relaxed">
             이 기기는 등록되지 않았어요. 처음 여는 PC가 이용 기기로 등록돼요.
-            <br />
-            아이패드는 가로로 돌리면 이용할 수 있어요.
           </p>
         </div>
       )}
