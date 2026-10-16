@@ -22,6 +22,8 @@ export const metadata: Metadata = {
   other: {
     // 구글 애드센스 사이트 소유권 인증 메타태그
     'google-adsense-account': ADSENSE_CLIENT,
+    // 네이버 서치어드바이저 사이트 소유확인 메타태그(2026-10-16 등록)
+    'naver-site-verification': 'f6daab85fbbcba9fa90cfd690c881c9be76efda1',
   },
   openGraph: {
     type: 'website',
