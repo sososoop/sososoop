@@ -20,6 +20,8 @@ export default function robots(): MetadataRoute.Robots {
           '/login',
           '/survey',
           '/api',
+          '/hangul/home',
+          '/hangul/app',
         ],
       },
     ],
