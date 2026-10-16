@@ -67,6 +67,20 @@ body {
   padding: 0 4px;
 }
 
+/* 한글놀이 상세페이지 바탕 모눈 · 형광펜 */
+.hg-grid {
+  background-color: #F4F4EF;
+  background-image:
+    linear-gradient(rgba(20, 20, 20, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(20, 20, 20, 0.05) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+.hg-mark {
+  background: linear-gradient(transparent 55%, #EAFF3D 55%);
+  padding: 0 4px;
+}
+
 .animate-marquee:hover {
   animation-play-state: paused;
 }

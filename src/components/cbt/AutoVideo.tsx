@@ -6,14 +6,15 @@
 import { useEffect, useRef } from 'react';
 
 type Props = {
-  name: string; // public/videos/cbt/<name>.mp4 · <name>.webp
+  name: string; // public/videos/<dir>/<name>.mp4 · <name>.webp
+  dir?: string; // 기본 cbt
   width: number;
   height: number;
   alt: string;
   className?: string;
 };
 
-export default function AutoVideo({ name, width, height, alt, className }: Props) {
+export default function AutoVideo({ name, dir = 'cbt', width, height, alt, className }: Props) {
   const ref = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
@@ -34,8 +35,8 @@ export default function AutoVideo({ name, width, height, alt, className }: Props
   return (
     <video
       ref={ref}
-      src={`/videos/cbt/${name}.mp4`}
-      poster={`/videos/cbt/${name}.webp`}
+      src={`/videos/${dir}/${name}.mp4`}
+      poster={`/videos/${dir}/${name}.webp`}
       width={width}
       height={height}
       muted
