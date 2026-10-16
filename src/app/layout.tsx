@@ -19,6 +19,10 @@ export const metadata: Metadata = {
   },
   description: SITE_DESCRIPTION,
   keywords: ['언어재활사', 'AI 활용', '교육 콘텐츠', '소소숲', '이승윤', '언어재활사 이승윤'],
+  // 구글 서치콘솔 사이트 소유확인 메타태그(2026-10-16 등록)
+  verification: {
+    google: '2FQd5uoqSEQF42mrHKn7iCsyY5jcAlKnpWreHXIft2I',
+  },
   other: {
     // 구글 애드센스 사이트 소유권 인증 메타태그
     'google-adsense-account': ADSENSE_CLIENT,
