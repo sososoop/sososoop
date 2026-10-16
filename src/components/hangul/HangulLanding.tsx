@@ -8,6 +8,8 @@ import AddToCartButton from '@/components/AddToCartButton';
 import AutoVideo from '@/components/cbt/AutoVideo';
 import type { CartItem } from '@/lib/cart';
 
+export const HANGUL_TRIAL_URL = 'https://hangul.sososoop.com';
+
 const C = {
   ink: '#141414',
   lime: '#EAFF3D',
@@ -204,6 +206,12 @@ export default function HangulLanding({ state, periodLabel, notes, checkoutHref,
                 이용권 구매하기{price ? ` · ${price}` : ''}
               </Link>
               {cart()}
+              <span className="inline-flex items-center gap-2.5">
+                <a href={HANGUL_TRIAL_URL} target="_blank" rel="noopener noreferrer" className={`${BTN} hover:bg-[#F2FF8F]`} style={{ background: C.lime }}>
+                  무료 체험판 써 보기 →
+                </a>
+                <span className="text-[13px] font-bold whitespace-nowrap" style={{ color: C.gray }}>로그인 없이</span>
+              </span>
             </div>
             {state === 'anonymous' && (
               <Link href={loginHref} className="inline-block mt-4 text-[14px] font-bold underline" style={{ color: C.gray }}>
@@ -382,6 +390,41 @@ export default function HangulLanding({ state, periodLabel, notes, checkoutHref,
             </p>
           </div>
         </section>
+        {/* 무료 체험 */}
+        <section className="px-6 py-16 md:py-24 border-t-2 border-[#141414]/10">
+          <div className="max-w-[880px] mx-auto text-center">
+            <h2 className="tracking-tight [word-break:keep-all]">
+              <span className="block text-[20px] md:text-[24px] font-bold text-[#4a4a46]">바로 구매하지 마세요.</span>
+              <span className="block mt-1 text-[34px] md:text-[48px] font-black leading-[1.15]">먼저 <Em>수업에 한 번</Em> 써 보세요.</span>
+            </h2>
+            <div className="mt-9 mx-auto max-w-[640px] flex flex-col sm:flex-row items-center gap-5 bg-white border-2 border-[#141414] p-7 text-left" style={SH(C.lime, 12)}>
+              <span className="flex gap-1.5" aria-hidden>
+                <Jamo ch="ㄱ" bg={C.cho} size={40} />
+                <Jamo ch="ㅏ" bg={C.lime} size={40} />
+              </span>
+              <div>
+                <p className="text-[26px] md:text-[30px] font-black tracking-tight leading-tight">한글놀이 <Em>무료 체험판</Em></p>
+                <p className="mt-2 text-[15px] font-bold leading-relaxed [word-break:keep-all]" style={{ color: '#4a4a46' }}>진도 설정 · 블렌딩 보드 · 벽돌깨기(한 글자) · 집중 음소로 의미 단어 10개까지</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {['로그인 없이', '결제 없이', '바로 인쇄'].map((t) => (
+                    <span key={t} className="border-2 border-[#141414] px-3 py-0.5 text-[15px] font-extrabold" style={{ background: C.limeSoft }}>{t}</span>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="mt-9 flex flex-wrap justify-center gap-3">
+              <a href={HANGUL_TRIAL_URL} target="_blank" rel="noopener noreferrer" className={`${BTN} px-7 py-3.5 text-[17px] hover:bg-[#F2FF8F]`} style={{ background: C.lime }}>
+                무료 체험판 써 보기 →
+              </a>
+              <Link href={checkoutHref} className={`${BTN} px-7 py-3.5 text-[17px] text-white`} style={{ background: C.blue }}>
+                이용권 구매하기
+              </Link>
+            </div>
+            <p className="mt-5 text-[13px] [word-break:keep-all]" style={{ color: C.gray }}>
+              헷갈리는 짝 · 사전 예문 문장 · 무의미 단어 · 글자잡기 · 아동별 프로필 · 가정과제 링크는 정식판에서 쓸 수 있어요.
+            </p>
+          </div>
+        </section>
       </div>
 
       {/* 이용 안내 + 구매 카드 */}
@@ -411,6 +454,10 @@ export default function HangulLanding({ state, periodLabel, notes, checkoutHref,
             </Link>
             {cart('w-full mt-2.5')}
             <p className="mt-3 text-[12px] text-ink-light">이용기간: {periodLabel}</p>
+            <a href={HANGUL_TRIAL_URL} target="_blank" rel="noopener noreferrer" className="inline-block mt-4 text-[13px] font-bold underline" style={{ color: C.blue }}>
+              먼저 무료 체험판 써 보기 →
+            </a>
+            <span className="block mt-1 text-[12px]" style={{ color: C.gray }}>진도 설정 · 블렌딩 보드 · 의미 단어 10개</span>
             {state === 'anonymous' && (
               <Link href={loginHref} className="inline-block mt-4 text-[13px] font-bold underline" style={{ color: C.blue }}>
                 이미 구매했어요 · 로그인
