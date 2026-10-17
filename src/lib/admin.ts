@@ -24,6 +24,14 @@ export function isAdmin(user: User | null | undefined): boolean {
   );
 }
 
+// 통계에서 뺄 관리자 계정인지 — 로그인 권한 판정(isAdmin)보다 넓게, 계정 이메일이 같아도 관리자로 본다.
+// 관리자 화면 접근에는 쓰지 말 것(접근은 isAdmin으로만).
+export function isAdminAccount(user: User | null | undefined): boolean {
+  if (!user) return false;
+  if (isAdmin(user)) return true;
+  return adminEmails().includes(String(user.email ?? '').toLowerCase());
+}
+
 // 현재 세션이 관리자면 그 유저, 아니면 null.
 export async function getAdminUser(): Promise<User | null> {
   const supabase = await createClient();

@@ -11,6 +11,7 @@ import {
   type EntitlementAlias,
 } from '@/lib/entitlements';
 import { ADMIN_TEST_ORDER_PREFIX } from '@/lib/test-order';
+import { isAdminAccount } from '@/lib/admin';
 
 export type OrderRow = {
   id: string;
@@ -61,6 +62,7 @@ export type MemberSummary = {
   // 가장 최근 결제에 남긴 휴대폰 번호와, 그 결제 때 새 소식 문자에 동의했는지
   phone: string | null;
   smsNews: boolean;
+  isAdmin: boolean; // 관리자 계정 — 결제 요약·'결제 회원' 필터에서 뺀다
 };
 
 export type MemberDetail = {
@@ -133,11 +135,12 @@ export function summarizeMember(
     cbtDeviceBound: Boolean(access),
     phone: withPhone?.phone ?? null,
     smsNews: Boolean(withPhone?.marketing_agreed_at),
+    isAdmin: isAdminAccount(user),
   };
 }
 
 // ── 결제 요약 ───────────────────────────────────────────────
-// 실제로 돈이 들어온 주문만 센다: 결제완료(DONE) · 금액 > 0 · 관리자 테스트 주문 아님.
+// 실제로 돈이 들어온 주문만 센다: 결제완료(DONE) · 금액 > 0 · 관리자 테스트 주문 아님 · 관리자 계정 결제 아님.
 // 관리자 지급(entitlement_grants)은 주문이 아니라서 여기에 들어오지 않는다.
 export type RevenueRow = {
   key: string;
@@ -152,6 +155,7 @@ export type RevenueSummary = {
   total: RevenueRow;
   canceled: { orders: number; amount: number }; // 취소·환불(합계에서 뺌)
   waiting: { orders: number; amount: number }; // 입금대기(아직 합계에 안 들어감)
+  admin: { orders: number; amount: number }; // 관리자 계정이 결제한 것(합계에서 뺌)
 };
 
 function isTestOrder(o: OrderRow): boolean {
@@ -163,9 +167,14 @@ function isRealMoney(o: OrderRow): boolean {
 }
 
 export function summarizeRevenue(
-  orders: OrderRow[],
+  allOrders: OrderRow[],
   productIds: Record<EntitlementAlias, string[]>,
+  adminUserIds: Set<string> = new Set(),
 ): RevenueSummary {
+  const byAdmin = (o: OrderRow) => Boolean(o.user_id && adminUserIds.has(o.user_id));
+  const adminPaid = allOrders.filter((o) => o.status === 'DONE' && isRealMoney(o) && byAdmin(o));
+  const orders = allOrders.filter((o) => !byAdmin(o));
+
   type Acc = { label: string; orders: number; amount: number; users: Set<string> };
   const acc = new Map<string, Acc>();
   // 이용권은 결제가 없어도 0원으로 보이게 먼저 자리를 만든다.
@@ -224,6 +233,10 @@ export function summarizeRevenue(
     total: { key: 'total', label: '합계', orders: totalOrders, buyers: allUsers.size, amount: totalAmount },
     canceled: sumOf('CANCELED'),
     waiting: sumOf('WAITING_FOR_DEPOSIT'),
+    admin: {
+      orders: adminPaid.length,
+      amount: adminPaid.reduce((sum, o) => sum + (o.amount ?? 0), 0),
+    },
   };
 }
 
@@ -285,7 +298,11 @@ export async function listMembers(): Promise<{
 
   return {
     members,
-    revenue: summarizeRevenue(orderRows, productIds),
+    revenue: summarizeRevenue(
+      orderRows,
+      productIds,
+      new Set(members.filter((m) => m.isAdmin).map((m) => m.id)),
+    ),
     grantsTableReady: !grants.error,
   };
 }

@@ -25,8 +25,8 @@ export function filterMembers(members: MemberSummary[], q: string, filter: Membe
       case 'cbt':
         return m.entitlements.cbt.length > 0;
       case 'paid':
-        // 실제로 결제한 금액이 있는 회원만. 관리자 지급만 받은 회원은 빠진다.
-        return m.paidTotal > 0;
+        // 실제로 결제한 금액이 있는 회원만. 관리자 지급만 받은 회원과 관리자 계정은 빠진다.
+        return m.paidTotal > 0 && !m.isAdmin;
       case 'none':
         return Object.values(m.entitlements).every((s) => s.length === 0);
       case 'deposit':
@@ -189,12 +189,16 @@ export default function MembersView({
 
 // 이용권별 결제 금액 — 관리자 지급·관리자 테스트 주문·취소/환불은 빼고 센다.
 function RevenuePanel({ revenue }: { revenue: RevenueSummary }) {
-  const { rows, total, canceled, waiting } = revenue;
+  const { rows, total, canceled, waiting, admin } = revenue;
+  const notes = [
+    admin.orders > 0 && `관리자 계정 결제 ${admin.orders}건(${formatWon(admin.amount)})`,
+    canceled.orders > 0 && `취소·환불 ${canceled.orders}건(${formatWon(canceled.amount)})`,
+  ].filter(Boolean);
   return (
     <section className="mb-8 rounded-[14px] border border-hairline bg-pearl p-5">
       <div className="flex flex-wrap items-baseline justify-between gap-2 mb-3">
         <h2 className="text-[16px] font-semibold text-ink">결제 요약</h2>
-        <p className="text-[12px] text-ink-light">관리자 지급·테스트 주문·취소/환불 제외</p>
+        <p className="text-[12px] text-ink-light">관리자 지급·관리자 계정 결제·테스트 주문·취소/환불 제외</p>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[480px] text-left text-[14px]">
@@ -224,10 +228,10 @@ function RevenuePanel({ revenue }: { revenue: RevenueSummary }) {
           </tbody>
         </table>
       </div>
-      {(canceled.orders > 0 || waiting.orders > 0) && (
+      {(notes.length > 0 || waiting.orders > 0) && (
         <p className="mt-3 text-[12px] text-ink-light leading-relaxed">
-          {canceled.orders > 0 && `취소·환불 ${canceled.orders}건(${formatWon(canceled.amount)})은 빼고 셌어요.`}
-          {canceled.orders > 0 && waiting.orders > 0 && ' '}
+          {notes.length > 0 && `${notes.join(', ')}은 빼고 셌어요.`}
+          {notes.length > 0 && waiting.orders > 0 && ' '}
           {waiting.orders > 0 && `입금대기 ${waiting.orders}건(${formatWon(waiting.amount)})은 입금 확인 뒤 합계에 들어가요.`}
         </p>
       )}
