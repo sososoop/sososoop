@@ -23,6 +23,7 @@ export default async function AdminMembersPage({
   return (
     <MembersView
       members={result.members}
+      revenue={result.revenue}
       shown={filterMembers(result.members, q, filter)}
       q={q}
       filter={filter}

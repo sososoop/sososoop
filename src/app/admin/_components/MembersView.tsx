@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import type { MemberSummary } from '@/lib/admin-data';
+import type { MemberSummary, RevenueSummary } from '@/lib/admin-data';
 import EntitlementBadges from './EntitlementBadges';
 import GrantsTableNotice from './GrantsTableNotice';
 import { formatDate, formatDateTime, formatWon, providerLabel } from './format';
@@ -8,6 +8,7 @@ export const MEMBER_FILTERS = [
   { value: 'all', label: '전체' },
   { value: 'hangul', label: '한글놀이 보유' },
   { value: 'cbt', label: '모의 CBT 보유' },
+  { value: 'paid', label: '결제 회원(지급 제외)' },
   { value: 'none', label: '이용권 없음' },
   { value: 'deposit', label: '입금대기 있음' },
 ] as const;
@@ -23,6 +24,9 @@ export function filterMembers(members: MemberSummary[], q: string, filter: Membe
         return m.entitlements.hangul.length > 0;
       case 'cbt':
         return m.entitlements.cbt.length > 0;
+      case 'paid':
+        // 실제로 결제한 금액이 있는 회원만. 관리자 지급만 받은 회원은 빠진다.
+        return m.paidTotal > 0;
       case 'none':
         return Object.values(m.entitlements).every((s) => s.length === 0);
       case 'deposit':
@@ -35,12 +39,14 @@ export function filterMembers(members: MemberSummary[], q: string, filter: Membe
 
 export default function MembersView({
   members,
+  revenue,
   shown,
   q,
   filter,
   grantsTableReady,
 }: {
   members: MemberSummary[];
+  revenue: RevenueSummary;
   shown: MemberSummary[];
   q: string;
   filter: MemberFilter;
@@ -77,6 +83,8 @@ export default function MembersView({
           </div>
         ))}
       </div>
+
+      <RevenuePanel revenue={revenue} />
 
       {/* 검색은 GET 폼 → 주소에 남아 새로고침·뒤로가기에도 유지 */}
       <form method="get" className="flex flex-wrap gap-2 mb-4">
@@ -176,5 +184,53 @@ export default function MembersView({
         </table>
       </div>
     </main>
+  );
+}
+
+// 이용권별 결제 금액 — 관리자 지급·관리자 테스트 주문·취소/환불은 빼고 센다.
+function RevenuePanel({ revenue }: { revenue: RevenueSummary }) {
+  const { rows, total, canceled, waiting } = revenue;
+  return (
+    <section className="mb-8 rounded-[14px] border border-hairline bg-pearl p-5">
+      <div className="flex flex-wrap items-baseline justify-between gap-2 mb-3">
+        <h2 className="text-[16px] font-semibold text-ink">결제 요약</h2>
+        <p className="text-[12px] text-ink-light">관리자 지급·테스트 주문·취소/환불 제외</p>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[480px] text-left text-[14px]">
+          <thead className="text-[12px] text-ink-muted">
+            <tr>
+              <th className="py-2 pr-4 font-medium">이용권</th>
+              <th className="py-2 pr-4 font-medium text-right">결제 건수</th>
+              <th className="py-2 pr-4 font-medium text-right">결제 회원</th>
+              <th className="py-2 font-medium text-right">결제 금액</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.key} className="border-t border-hairline">
+                <td className="py-2.5 pr-4 text-ink">{r.label}</td>
+                <td className="py-2.5 pr-4 text-right text-ink-muted whitespace-nowrap">{r.orders.toLocaleString('ko-KR')}건</td>
+                <td className="py-2.5 pr-4 text-right text-ink-muted whitespace-nowrap">{r.buyers.toLocaleString('ko-KR')}명</td>
+                <td className="py-2.5 text-right text-ink whitespace-nowrap">{formatWon(r.amount)}</td>
+              </tr>
+            ))}
+            <tr className="border-t-2 border-ink/20 font-semibold">
+              <td className="py-2.5 pr-4 text-ink">총액</td>
+              <td className="py-2.5 pr-4 text-right text-ink whitespace-nowrap">{total.orders.toLocaleString('ko-KR')}건</td>
+              <td className="py-2.5 pr-4 text-right text-ink whitespace-nowrap">{total.buyers.toLocaleString('ko-KR')}명</td>
+              <td className="py-2.5 text-right text-primary text-[16px] whitespace-nowrap">{formatWon(total.amount)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      {(canceled.orders > 0 || waiting.orders > 0) && (
+        <p className="mt-3 text-[12px] text-ink-light leading-relaxed">
+          {canceled.orders > 0 && `취소·환불 ${canceled.orders}건(${formatWon(canceled.amount)})은 빼고 셌어요.`}
+          {canceled.orders > 0 && waiting.orders > 0 && ' '}
+          {waiting.orders > 0 && `입금대기 ${waiting.orders}건(${formatWon(waiting.amount)})은 입금 확인 뒤 합계에 들어가요.`}
+        </p>
+      )}
+    </section>
   );
 }

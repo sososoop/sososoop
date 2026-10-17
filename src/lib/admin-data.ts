@@ -10,6 +10,7 @@ import {
   slugIds,
   type EntitlementAlias,
 } from '@/lib/entitlements';
+import { ADMIN_TEST_ORDER_PREFIX } from '@/lib/test-order';
 
 export type OrderRow = {
   id: string;
@@ -135,6 +136,97 @@ export function summarizeMember(
   };
 }
 
+// ── 결제 요약 ───────────────────────────────────────────────
+// 실제로 돈이 들어온 주문만 센다: 결제완료(DONE) · 금액 > 0 · 관리자 테스트 주문 아님.
+// 관리자 지급(entitlement_grants)은 주문이 아니라서 여기에 들어오지 않는다.
+export type RevenueRow = {
+  key: string;
+  label: string;
+  orders: number; // 결제 건수
+  buyers: number; // 결제한 회원 수(중복 없이)
+  amount: number; // 결제 금액 합계(원)
+};
+
+export type RevenueSummary = {
+  rows: RevenueRow[]; // 이용권별(+ 그 밖의 상품)
+  total: RevenueRow;
+  canceled: { orders: number; amount: number }; // 취소·환불(합계에서 뺌)
+  waiting: { orders: number; amount: number }; // 입금대기(아직 합계에 안 들어감)
+};
+
+function isTestOrder(o: OrderRow): boolean {
+  return (o.order_name ?? '').startsWith(ADMIN_TEST_ORDER_PREFIX);
+}
+
+function isRealMoney(o: OrderRow): boolean {
+  return (o.amount ?? 0) > 0 && !isTestOrder(o);
+}
+
+export function summarizeRevenue(
+  orders: OrderRow[],
+  productIds: Record<EntitlementAlias, string[]>,
+): RevenueSummary {
+  type Acc = { label: string; orders: number; amount: number; users: Set<string> };
+  const acc = new Map<string, Acc>();
+  // 이용권은 결제가 없어도 0원으로 보이게 먼저 자리를 만든다.
+  for (const { alias, label } of ENTITLEMENT_PRODUCTS) {
+    acc.set(alias, { label: `${label} 이용권`, orders: 0, amount: 0, users: new Set() });
+  }
+
+  const allUsers = new Set<string>();
+  let totalOrders = 0;
+  let totalAmount = 0;
+
+  for (const o of orders) {
+    if (o.status !== 'DONE' || !isRealMoney(o)) continue;
+    const ids = slugIds(o.product_slug);
+    const matched = ENTITLEMENT_PRODUCTS.filter(({ alias }) =>
+      ids.some((id) => productIds[alias].includes(id)),
+    );
+    let key: string;
+    let label: string;
+    if (matched.length === 1) {
+      key = matched[0].alias;
+      label = `${matched[0].label} 이용권`;
+    } else if (matched.length > 1) {
+      key = 'bundle';
+      label = '여러 이용권 함께 결제';
+    } else {
+      label = o.order_name?.trim() || '그 밖의 상품';
+      key = `other:${label}`;
+    }
+    const row = acc.get(key) ?? { label, orders: 0, amount: 0, users: new Set<string>() };
+    row.orders += 1;
+    row.amount += o.amount ?? 0;
+    if (o.user_id) row.users.add(o.user_id);
+    acc.set(key, row);
+
+    totalOrders += 1;
+    totalAmount += o.amount ?? 0;
+    if (o.user_id) allUsers.add(o.user_id);
+  }
+
+  const rows: RevenueRow[] = [...acc.entries()].map(([key, r]) => ({
+    key,
+    label: r.label,
+    orders: r.orders,
+    buyers: r.users.size,
+    amount: r.amount,
+  }));
+
+  const sumOf = (status: string) => {
+    const list = orders.filter((o) => o.status === status && isRealMoney(o));
+    return { orders: list.length, amount: list.reduce((sum, o) => sum + (o.amount ?? 0), 0) };
+  };
+
+  return {
+    rows,
+    total: { key: 'total', label: '합계', orders: totalOrders, buyers: allUsers.size, amount: totalAmount },
+    canceled: sumOf('CANCELED'),
+    waiting: sumOf('WAITING_FOR_DEPOSIT'),
+  };
+}
+
 function groupByUser<T extends { user_id: string | null }>(rows: T[]): Map<string, T[]> {
   const map = new Map<string, T[]>();
   for (const row of rows) {
@@ -149,6 +241,7 @@ function groupByUser<T extends { user_id: string | null }>(rows: T[]): Map<strin
 // service_role 키가 없으면(로컬 등) null.
 export async function listMembers(): Promise<{
   members: MemberSummary[];
+  revenue: RevenueSummary;
   grantsTableReady: boolean;
 } | null> {
   const db = createAdminClient();
@@ -171,7 +264,8 @@ export async function listMembers(): Promise<{
   ]);
   if (orders.error) throw new Error(`주문 조회 실패: ${orders.error.message}`);
 
-  const ordersByUser = groupByUser((orders.data ?? []) as OrderRow[]);
+  const orderRows = (orders.data ?? []) as OrderRow[];
+  const ordersByUser = groupByUser(orderRows);
   const grantsByUser = groupByUser((grants.error ? [] : grants.data ?? []) as GrantRow[]);
   const accessByUser = new Map(
     ((access.data ?? []) as AccessRow[]).map((row) => [row.user_id, row]),
@@ -189,7 +283,11 @@ export async function listMembers(): Promise<{
     )
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
-  return { members, grantsTableReady: !grants.error };
+  return {
+    members,
+    revenue: summarizeRevenue(orderRows, productIds),
+    grantsTableReady: !grants.error,
+  };
 }
 
 // service_role 키가 없으면 'unavailable', 회원이 없으면 null.
