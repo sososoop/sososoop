@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ENTITLEMENT_PRODUCTS, isGrantActive } from '@/lib/entitlements';
+import { ENTITLEMENT_PRODUCTS, GRANT_MONTH_OPTIONS, grantMonths, isGrantActive } from '@/lib/entitlements';
 import { formatKoreanDate } from '@/lib/period';
 import { nextDeviceMoveAt } from '@/lib/cbt-device';
 import type { MemberDetail } from '@/lib/admin-data';
@@ -60,7 +60,7 @@ export default function MemberDetailView({ detail }: { detail: MemberDetail }) {
             {ENTITLEMENT_PRODUCTS.map(({ alias, label }) => {
               const sources = member.entitlements[alias];
               const activeGrant = grants.find(
-                (g) => g.product === alias && !g.revoked_at && isGrantActive(alias, g.granted_at),
+                (g) => g.product === alias && !g.revoked_at && isGrantActive(alias, g),
               );
               const expiresAt = member.expiresAt[alias];
               const until = expiresAt ? formatKoreanDate(new Date(expiresAt)) : null;
@@ -75,7 +75,7 @@ export default function MemberDetailView({ detail }: { detail: MemberDetail }) {
                       : [
                           sources.includes('paid') && '결제로 보유',
                           activeGrant &&
-                            `관리자 지급 (${formatDateTime(activeGrant.granted_at)}${
+                            `관리자 지급 (${formatDateTime(activeGrant.granted_at)} · ${grantMonths(alias, activeGrant.months)}개월${
                               activeGrant.note ? ` · ${activeGrant.note}` : ''
                             })`,
                           until && `${until}까지`,
@@ -102,6 +102,22 @@ export default function MemberDetailView({ detail }: { detail: MemberDetail }) {
                       <form action={grantEntitlement} className="flex flex-wrap items-center gap-2">
                         <input type="hidden" name="userId" value={member.id} />
                         <input type="hidden" name="product" value={alias} />
+                        {GRANT_MONTH_OPTIONS[alias].length > 1 ? (
+                          <select
+                            name="months"
+                            defaultValue={GRANT_MONTH_OPTIONS[alias][0]}
+                            aria-label="이용기간"
+                            className="px-3 py-1.5 rounded-full border border-hairline bg-canvas text-[13px] text-ink focus:outline-none focus:border-primary"
+                          >
+                            {[...GRANT_MONTH_OPTIONS[alias]].sort((a, b) => a - b).map((m) => (
+                              <option key={m} value={m}>
+                                {m}개월
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span className="text-[13px] text-ink-light">{GRANT_MONTH_OPTIONS[alias][0]}개월</span>
+                        )}
                         <input
                           type="text"
                           name="note"

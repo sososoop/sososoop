@@ -4,7 +4,7 @@
 // 매 액션마다 관리자 세션을 다시 확인하고, 입력은 전부 검증한다.
 import { revalidatePath, revalidateTag } from 'next/cache';
 import { getAdminUser } from '@/lib/admin';
-import { isEntitlementAlias, isGrantActive } from '@/lib/entitlements';
+import { GRANT_MONTH_OPTIONS, isEntitlementAlias, isGrantActive, type GrantPeriod } from '@/lib/entitlements';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getFreeLive } from '@/data/freeLives';
 import { NOTION_CACHE_TAG } from '@/lib/notion';
@@ -46,19 +46,30 @@ export async function grantEntitlement(formData: FormData) {
   const product = String(formData.get('product') ?? '');
   if (!isEntitlementAlias(product)) throw new Error('잘못된 이용권입니다.');
   const note = String(formData.get('note') ?? '').trim().slice(0, 200) || null;
+  // 이용기간(개월): 이 이용권에서 고를 수 있는 값만. 없으면 기본값(첫 값).
+  const options = GRANT_MONTH_OPTIONS[product];
+  const picked = Number(formData.get('months'));
+  const months = options.includes(picked) ? picked : options[0];
 
   const existing = await db
     .from('entitlement_grants')
-    .select('granted_at')
+    .select('*') // months 칸이 아직 없어도 에러가 나지 않게
     .eq('user_id', userId)
     .eq('product', product)
     .is('revoked_at', null);
   if (existing.error) throw new Error(`지급 실패: ${existing.error.message}`);
 
-  // 기간이 끝난 지급은 없는 것으로 보고 새로 지급한다(CBT는 지급일부터 3개월, 한글놀이 12개월).
-  if (!(existing.data ?? []).some((g) => isGrantActive(product, g.granted_at))) {
-    const { error } = await db.from('entitlement_grants').insert({ user_id: userId, product, note });
-    if (error) throw new Error(`지급 실패: ${error.message}`);
+  // 기간이 끝난 지급은 없는 것으로 보고 새로 지급한다(CBT는 지급일부터 3개월, 한글놀이 6·12개월 중 고른 기간).
+  if (!(existing.data ?? []).some((g) => isGrantActive(product, g as GrantPeriod))) {
+    let { error } = await db.from('entitlement_grants').insert({ user_id: userId, product, note, months });
+    // months 칸 추가 SQL(db/entitlement_grants_months.sql) 실행 전: 기본 기간이면 칸 없이 지급한다.
+    if (error && months === options[0] && /months/.test(error.message)) {
+      ({ error } = await db.from('entitlement_grants').insert({ user_id: userId, product, note }));
+    }
+    if (error) {
+      const hint = /months/.test(error.message) ? ' (db/entitlement_grants_months.sql 을 먼저 실행해 주세요)' : '';
+      throw new Error(`지급 실패: ${error.message}${hint}`);
+    }
   }
   refresh(userId);
 }

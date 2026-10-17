@@ -34,6 +34,7 @@ export type GrantRow = {
   note: string | null;
   granted_at: string;
   revoked_at: string | null;
+  months?: number | null; // 지급 이용기간(개월). 비면 기본값(2026-10-17 칸 추가)
 };
 
 export type AccessRow = {
@@ -106,7 +107,7 @@ export function summarizeMember(
       .filter((d): d is Date => d !== null);
     const grantEnds = grants
       .filter((g) => g.product === alias && !g.revoked_at)
-      .map((g) => grantEnd(alias, g.granted_at));
+      .map((g) => grantEnd(alias, g));
 
     // 기간이 끝난 결제·지급은 보유로 세지 않는다
     const sources: EntitlementSource[] = [];

@@ -3,7 +3,7 @@
 //   1) 결제: orders 테이블에 status='DONE' 으로 기록된 주문
 //   2) 관리자 지급: entitlement_grants 테이블의 취소되지 않은 행
 // 이용기간은 결제일(지급일)부터 센다. CBT 3개월(2026-10-03).
-// 한글놀이는 2026-10-17부터 상품에 따라 6개월·12개월, 관리자 지급은 12개월.
+// 한글놀이는 2026-10-17부터 상품에 따라 6개월·12개월, 관리자 지급은 지급 때 고른 기간(기본 12개월).
 // 조회는 RLS를 우회하는 service_role로 한다.
 import { createAdminClient } from '@/lib/supabase/admin';
 import { aliasProductIds, PRODUCT_ALIASES, type ProductAlias } from '@/lib/products';
@@ -26,8 +26,19 @@ const PLAN_ALIASES: Record<EntitlementAlias, readonly ProductAlias[]> = {
   cbt: ['cbt'],
 };
 
-// 관리자 지급 이용기간(개월) — 지급일부터.
-const GRANT_MONTHS: Record<EntitlementAlias, number> = { hangul: 12, cbt: CBT_PERIOD_MONTHS };
+// 관리자 지급 때 고를 수 있는 이용기간(개월, 지급일부터). 첫 값이 기본값이다.
+// 지급 행의 months 가 비어 있으면(칸 추가 전 지급) 기본값으로 센다.
+export const GRANT_MONTH_OPTIONS: Record<EntitlementAlias, readonly number[]> = {
+  hangul: [12, 6],
+  cbt: [CBT_PERIOD_MONTHS],
+};
+
+export function grantMonths(alias: EntitlementAlias, months?: number | null): number {
+  const options = GRANT_MONTH_OPTIONS[alias];
+  return months && options.includes(months) ? months : options[0];
+}
+
+export type GrantPeriod = { granted_at: string; months?: number | null };
 
 // product_slug 는 결제 상품 id(들)를 콤마로 연결한 문자열이다.
 export function slugIds(productSlug: unknown): string[] {
@@ -80,12 +91,12 @@ export function orderEnd(
 }
 
 // 관리자 지급 한 건이 끝나는 시각.
-export function grantEnd(alias: EntitlementAlias, grantedAt: string): Date {
-  return periodEnd(grantedAt, GRANT_MONTHS[alias]);
+export function grantEnd(alias: EntitlementAlias, grant: GrantPeriod): Date {
+  return periodEnd(grant.granted_at, grantMonths(alias, grant.months));
 }
 
-export function isGrantActive(alias: EntitlementAlias, grantedAt: string, now = Date.now()): boolean {
-  return grantEnd(alias, grantedAt).getTime() > now;
+export function isGrantActive(alias: EntitlementAlias, grant: GrantPeriod, now = Date.now()): boolean {
+  return grantEnd(alias, grant).getTime() > now;
 }
 
 export type EntitlementStatus = {
@@ -112,7 +123,7 @@ async function getEntitlement(
       .eq('status', 'DONE'),
     admin
       .from('entitlement_grants')
-      .select('granted_at')
+      .select('*') // months 칸이 아직 없어도 에러가 나지 않게
       .eq('user_id', userId)
       .eq('product', alias)
       .is('revoked_at', null),
@@ -128,7 +139,7 @@ async function getEntitlement(
   }
   // 지급 테이블이 아직 없으면(SQL 미실행) 에러가 난다 → 지급 없음으로 본다.
   if (!grants.error) {
-    for (const row of grants.data ?? []) ends.push(grantEnd(alias, row.granted_at));
+    for (const row of grants.data ?? []) ends.push(grantEnd(alias, row as GrantPeriod));
   }
   if (ends.length === 0) return none;
 
