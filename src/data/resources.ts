@@ -149,7 +149,7 @@ export const paidResources: Resource[] = [
     category: "학습",
     fileType: "웹앱",
     type: "paid",
-    price: 12900,
+    price: 14900,
     notionFormUrl: "https://sunrise-wisteria-5ca.notion.site/ca565ef8fa6b4b81b3f6be3978a2e84a",
     accountInfo: {
       bank: "토스뱅크",

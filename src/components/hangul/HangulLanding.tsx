@@ -32,8 +32,8 @@ const CLIPS = {
 } as const;
 type Clip = (typeof CLIPS)[keyof typeof CLIPS];
 
-// 이용권 옵션 하나(6개월·12개월). 가격은 cartItem.price(Notion).
-export type HangulPlan = { months: number; checkoutHref: string; cartItem: CartItem };
+// 이용권 옵션 하나(6개월·12개월). 가격은 cartItem.price(Notion), listPrice는 정상가(더 높을 때만 줄 그어 표시).
+export type HangulPlan = { months: number; checkoutHref: string; cartItem: CartItem; listPrice?: number };
 
 type Props = {
   state: 'anonymous' | 'unpaid';
@@ -456,6 +456,7 @@ export default function HangulLanding({ state, plans, notes, loginHref }: Props)
             <div className="flex flex-col gap-4 text-left">
               {plans.map((p) => {
                 const best = p.months === 12 && plans.length > 1;
+                const onSale = !!p.listPrice && p.listPrice > p.cartItem.price;
                 return (
                   <div
                     key={p.months}
@@ -469,8 +470,20 @@ export default function HangulLanding({ state, plans, notes, loginHref }: Props)
                     )}
                     <div className="flex items-baseline justify-between gap-2">
                       <span className="text-[17px] font-black">{p.months}개월</span>
+                      {onSale && (
+                        <span className="ml-auto text-[14px] font-bold line-through" style={{ color: C.gray }}>
+                          <span className="sr-only">정상가 </span>{won(p.listPrice!)}
+                        </span>
+                      )}
                       <span className="text-[26px] font-black tracking-tight">{won(p.cartItem.price)}</span>
                     </div>
+                    {onSale && (
+                      <p className="text-right">
+                        <span className="inline-block border-2 border-[#141414] px-2 py-0.5 text-[12px] font-black" style={{ background: C.lime }}>
+                          첫 출시 특별가 · {won(p.listPrice! - p.cartItem.price)} 할인
+                        </span>
+                      </p>
+                    )}
                     <p className="mt-0.5 text-[12.5px] font-bold text-right" style={{ color: C.gray }}>
                       한 달 약 {won(Math.round(p.cartItem.price / p.months))}
                     </p>
@@ -491,7 +504,7 @@ export default function HangulLanding({ state, plans, notes, loginHref }: Props)
             <a href={HANGUL_TRIAL_URL} target="_blank" rel="noopener noreferrer" className="inline-block mt-4 text-[13px] font-bold underline" style={{ color: C.blue }}>
               먼저 무료 체험판 써 보기 →
             </a>
-            <span className="block mt-1 text-[12px]" style={{ color: C.gray }}>진도 설정 · 블렌딩 보드 · 의미 단어 10개</span>
+            <span className="block mt-1 text-[12px]" style={{ color: C.gray }}>진도 설정 · 블렌딩 보드 · 게임 2종 · 자료 만들기 맛보기</span>
             {state === 'anonymous' && (
               <Link href={loginHref} className="inline-block mt-4 text-[13px] font-bold underline" style={{ color: C.blue }}>
                 이미 구매했어요 · 로그인

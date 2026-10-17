@@ -22,12 +22,16 @@ const NOTES = [
   '이용기간 중 기능이 추가·개선되어도 추가 비용은 없습니다.',
 ];
 
-// 이용권 옵션(2026-10-17~): 6개월 · 12개월. 가격은 Notion 상품에서 읽는다.
+// 이용권 옵션(2026-10-17~): 6개월 · 12개월. 결제 가격은 Notion 상품에서 읽는다.
+// 정상 판매가 — Notion 가격이 이보다 낮으면 '첫 출시 특별가'로 정상가에 줄을 그어 보여 준다.
+// 특별가를 끝낼 때는 Notion 가격을 정상가로 바꾸면 표시도 저절로 사라진다.
+const LIST_PRICE: Record<number, number> = { 6: 19900, 12: 29900 };
+
 async function hangulPlans(): Promise<HangulPlan[]> {
   const [six, twelve] = await Promise.all([getCartItem('hangul'), getCartItem('hangul12')]);
   const plans: HangulPlan[] = [];
-  if (six) plans.push({ months: 6, checkoutHref: '/checkout?product=hangul', cartItem: six });
-  if (twelve) plans.push({ months: 12, checkoutHref: '/checkout?product=hangul12', cartItem: twelve });
+  if (six) plans.push({ months: 6, checkoutHref: '/checkout?product=hangul', cartItem: six, listPrice: LIST_PRICE[6] });
+  if (twelve) plans.push({ months: 12, checkoutHref: '/checkout?product=hangul12', cartItem: twelve, listPrice: LIST_PRICE[12] });
   return plans;
 }
 
