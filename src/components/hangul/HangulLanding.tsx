@@ -409,7 +409,7 @@ export default function HangulLanding({ state, plans, notes, loginHref }: Props)
               </span>
               <div>
                 <p className="text-[26px] md:text-[30px] font-black tracking-tight leading-tight">한글놀이 <Em>무료 체험판</Em></p>
-                <p className="mt-2 text-[15px] font-bold leading-relaxed [word-break:keep-all]" style={{ color: '#4a4a46' }}>진도 설정 · 블렌딩 보드 · 벽돌깨기(한 글자) · 집중 음소로 의미 단어 10개까지</p>
+                <p className="mt-2 text-[15px] font-bold leading-relaxed [word-break:keep-all]" style={{ color: '#4a4a46' }}>진도 설정 · 블렌딩 보드 · 게임 2종(한 글자) · 자료 만들기 맛보기(의미·무의미 단어 10개, 헷갈리는 짝·문장 3개)</p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {['로그인 없이', '결제 없이', '바로 인쇄'].map((t) => (
                     <span key={t} className="border-2 border-[#141414] px-3 py-0.5 text-[15px] font-extrabold" style={{ background: C.limeSoft }}>{t}</span>
