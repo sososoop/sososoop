@@ -178,9 +178,28 @@ export function summarizeRevenue(
 
   type Acc = { label: string; orders: number; amount: number; users: Set<string> };
   const acc = new Map<string, Acc>();
+
+  // 이용기간이 여러 가지인 이용권(한글놀이 6·12개월)은 기간별로 줄을 나눈다.
+  const periodsOf = (alias: EntitlementAlias) =>
+    [...new Set(Object.values(plans[alias]))].sort((a, b) => a - b);
+  const rowKey = (alias: EntitlementAlias, months: number | null) =>
+    months !== null && periodsOf(alias).length > 1 ? `${alias}:${months}` : alias;
+  const rowLabel = (alias: EntitlementAlias, months: number | null) => {
+    const base = `${ENTITLEMENT_PRODUCTS.find((p) => p.alias === alias)?.label ?? alias} 이용권`;
+    return months !== null && periodsOf(alias).length > 1 ? `${base} ${months}개월` : base;
+  };
+
   // 이용권은 결제가 없어도 0원으로 보이게 먼저 자리를 만든다.
-  for (const { alias, label } of ENTITLEMENT_PRODUCTS) {
-    acc.set(alias, { label: `${label} 이용권`, orders: 0, amount: 0, users: new Set() });
+  for (const { alias } of ENTITLEMENT_PRODUCTS) {
+    const periods = periodsOf(alias);
+    for (const months of periods.length > 1 ? periods : [null]) {
+      acc.set(rowKey(alias, months), {
+        label: rowLabel(alias, months),
+        orders: 0,
+        amount: 0,
+        users: new Set(),
+      });
+    }
   }
 
   const allUsers = new Set<string>();
@@ -196,8 +215,11 @@ export function summarizeRevenue(
     let key: string;
     let label: string;
     if (matched.length === 1) {
-      key = matched[0].alias;
-      label = `${matched[0].label} 이용권`;
+      const alias = matched[0].alias;
+      // 이 주문 상품의 이용기간(개월). 한 주문에 같은 이용권 상품이 여럿이면 긴 쪽.
+      const months = Math.max(...ids.filter((id) => id in plans[alias]).map((id) => plans[alias][id]));
+      key = rowKey(alias, months);
+      label = rowLabel(alias, months);
     } else if (matched.length > 1) {
       key = 'bundle';
       label = '여러 이용권 함께 결제';
