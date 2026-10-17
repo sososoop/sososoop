@@ -9,7 +9,7 @@ import { nextDeviceMoveAt } from '@/lib/cbt-device';
 import {
   entitlementProductIds,
   getCbtEntitlement,
-  hasHangulEntitlement,
+  getHangulEntitlement,
   slugIds,
   type EntitlementAlias,
   type EntitlementStatus,
@@ -45,14 +45,14 @@ export type MyPageData = {
   cbt: EntitlementStatus;
   // 모의 CBT 등록 기기 — 등록된 기기가 없으면 null. registeredAt: 지금 기기를 등록한(옮긴) 때. nextMoveAt: 다음에 직접 옮길 수 있는 때(null = 지금)
   cbtDevice: { registeredAt: string | null; nextMoveAt: string | null } | null;
-  hangul: boolean;
+  hangul: EntitlementStatus;
   orders: MyOrder[];
   lives: MyLive[]; // 신청한 무료 LIVE(ZOOM 링크 포함)
 };
 
 const APP_LINKS: Record<EntitlementAlias, { title: string; href: string }> = {
   cbt: { title: '모의 CBT 이용권', href: '/slp-cbt-practice' },
-  hangul: { title: '한글놀이 이용권', href: '/hangul' },
+  hangul: { title: '한글놀이 이용권', href: '/hangul' }, // 6개월·12개월 상품 모두
 };
 
 function memberName(user: User): string {
@@ -100,7 +100,7 @@ export async function getMyPageData(user: User): Promise<MyPageData> {
   const admin = createAdminClient();
   const [cbt, hangul, appIds, resources, orders, lives] = await Promise.all([
     getCbtEntitlement(user.id),
-    hasHangulEntitlement(user.id),
+    getHangulEntitlement(user.id),
     entitlementProductIds(),
     getResourcesCached(),
     admin

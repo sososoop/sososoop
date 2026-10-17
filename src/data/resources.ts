@@ -143,13 +143,29 @@ export const paidResources: Resource[] = [
   },
   {
     id: "hangul-play-pass",
-    title: "한글놀이 이용권",
+    title: "한글놀이 이용권 6개월",
     description:
       "난독·읽기부진 아동을 위한 한글 블렌딩 학습 도구 이용권입니다. 아동이 배운 초성·중성·종성만 켜두면 블렌딩 보드·읽기 게임·학습자료 만들기가 모두 그 범위 안에서 돌아갑니다. 아동별 프로필로 진도를 따로 관리하고, 의미 단어·무의미 단어·문장을 자동 생성해 바로 인쇄하거나 글씨연습장으로 이어서 만들 수 있어요. 이용기간은 결제일로부터 6개월이며, 기간 중 추가·업데이트되는 기능도 그대로 이용할 수 있습니다.",
     category: "학습",
     fileType: "웹앱",
     type: "paid",
-    price: 7900,
+    price: 12900,
+    notionFormUrl: "https://sunrise-wisteria-5ca.notion.site/ca565ef8fa6b4b81b3f6be3978a2e84a",
+    accountInfo: {
+      bank: "토스뱅크",
+      number: "1000-1285-0842",
+      holder: "이승윤",
+    },
+  },
+  {
+    id: "hangul-play-pass-12",
+    title: "한글놀이 이용권 12개월",
+    description:
+      "난독·읽기부진 아동을 위한 한글 블렌딩 학습 도구 이용권입니다. 아동이 배운 초성·중성·종성만 켜두면 블렌딩 보드·읽기 게임·학습자료 만들기가 모두 그 범위 안에서 돌아갑니다. 아동별 프로필로 진도를 따로 관리하고, 의미 단어·무의미 단어·문장을 자동 생성해 바로 인쇄하거나 글씨연습장으로 이어서 만들 수 있어요. 이용기간은 결제일로부터 12개월이며, 기간 중 추가·업데이트되는 기능도 그대로 이용할 수 있습니다.",
+    category: "학습",
+    fileType: "웹앱",
+    type: "paid",
+    price: 19900,
     notionFormUrl: "https://sunrise-wisteria-5ca.notion.site/ca565ef8fa6b4b81b3f6be3978a2e84a",
     accountInfo: {
       bank: "토스뱅크",

@@ -4,11 +4,12 @@ import type { User } from '@supabase/supabase-js';
 import { createAdminClient } from '@/lib/supabase/admin';
 import {
   ENTITLEMENT_PRODUCTS,
-  entitlementEnd,
-  entitlementProductIds,
-  isEntitlementActive,
+  entitlementPlans,
+  grantEnd,
+  orderEnd,
   slugIds,
   type EntitlementAlias,
+  type EntitlementPlans,
 } from '@/lib/entitlements';
 import { ADMIN_TEST_ORDER_PREFIX } from '@/lib/test-order';
 import { isAdminAccount } from '@/lib/admin';
@@ -53,7 +54,7 @@ export type MemberSummary = {
   createdAt: string;
   lastSignInAt: string | null;
   entitlements: Record<EntitlementAlias, EntitlementSource[]>;
-  // 기간이 있는 이용권(CBT)의 가장 늦게 끝나는 날(ISO). 이미 끝났어도 남긴다. 기간 검사가 없거나 없으면 null.
+  // 이용권의 가장 늦게 끝나는 날(ISO). 이미 끝났어도 남긴다. 결제·지급이 없으면 null.
   expiresAt: Record<EntitlementAlias, string | null>;
   paidTotal: number;
   orderCount: number;
@@ -89,7 +90,7 @@ export function summarizeMember(
   orders: OrderRow[],
   grants: GrantRow[],
   access: AccessRow | undefined | null,
-  productIds: Record<EntitlementAlias, string[]>,
+  plans: EntitlementPlans,
 ): MemberSummary {
   const done = orders.filter((o) => o.status === 'DONE');
   const withPhone = done
@@ -99,22 +100,21 @@ export function summarizeMember(
   const entitlements = {} as Record<EntitlementAlias, EntitlementSource[]>;
   const expiresAt = {} as Record<EntitlementAlias, string | null>;
   for (const { alias } of ENTITLEMENT_PRODUCTS) {
-    const paidStarts = done
-      .filter((o) => slugIds(o.product_slug).some((id) => productIds[alias].includes(id)))
-      .map((o) => o.created_at);
-    const grantStarts = grants
+    const now = Date.now();
+    const paidEnds = done
+      .map((o) => orderEnd(plans[alias], o.product_slug, o.created_at))
+      .filter((d): d is Date => d !== null);
+    const grantEnds = grants
       .filter((g) => g.product === alias && !g.revoked_at)
-      .map((g) => g.granted_at);
+      .map((g) => grantEnd(alias, g.granted_at));
 
     // 기간이 끝난 결제·지급은 보유로 세지 않는다
     const sources: EntitlementSource[] = [];
-    if (paidStarts.some((t) => isEntitlementActive(alias, t))) sources.push('paid');
-    if (grantStarts.some((t) => isEntitlementActive(alias, t))) sources.push('granted');
+    if (paidEnds.some((d) => d.getTime() > now)) sources.push('paid');
+    if (grantEnds.some((d) => d.getTime() > now)) sources.push('granted');
     entitlements[alias] = sources;
 
-    const ends = [...paidStarts, ...grantStarts]
-      .map((t) => entitlementEnd(alias, t))
-      .filter((d): d is Date => d !== null);
+    const ends = [...paidEnds, ...grantEnds];
     expiresAt[alias] = ends.length
       ? new Date(Math.max(...ends.map((d) => d.getTime()))).toISOString()
       : null;
@@ -168,7 +168,7 @@ function isRealMoney(o: OrderRow): boolean {
 
 export function summarizeRevenue(
   allOrders: OrderRow[],
-  productIds: Record<EntitlementAlias, string[]>,
+  plans: EntitlementPlans,
   adminUserIds: Set<string> = new Set(),
 ): RevenueSummary {
   const byAdmin = (o: OrderRow) => Boolean(o.user_id && adminUserIds.has(o.user_id));
@@ -190,7 +190,7 @@ export function summarizeRevenue(
     if (o.status !== 'DONE' || !isRealMoney(o)) continue;
     const ids = slugIds(o.product_slug);
     const matched = ENTITLEMENT_PRODUCTS.filter(({ alias }) =>
-      ids.some((id) => productIds[alias].includes(id)),
+      ids.some((id) => id in plans[alias]),
     );
     let key: string;
     let label: string;
@@ -268,12 +268,12 @@ export async function listMembers(): Promise<{
     if (data.users.length < 1000) break;
   }
 
-  const [orders, grants, access, productIds] = await Promise.all([
+  const [orders, grants, access, plans] = await Promise.all([
     // 결제창만 열고 나간 주문(READY)은 빼고 본다.
     db.from('orders').select('*').neq('status', 'READY').order('created_at', { ascending: false }),
     db.from('entitlement_grants').select('*'),
     db.from('cbt_access').select('*'),
-    entitlementProductIds(),
+    entitlementPlans(),
   ]);
   if (orders.error) throw new Error(`주문 조회 실패: ${orders.error.message}`);
 
@@ -291,7 +291,7 @@ export async function listMembers(): Promise<{
         ordersByUser.get(user.id) ?? [],
         grantsByUser.get(user.id) ?? [],
         accessByUser.get(user.id),
-        productIds,
+        plans,
       ),
     )
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
@@ -300,7 +300,7 @@ export async function listMembers(): Promise<{
     members,
     revenue: summarizeRevenue(
       orderRows,
-      productIds,
+      plans,
       new Set(members.filter((m) => m.isAdmin).map((m) => m.id)),
     ),
     grantsTableReady: !grants.error,
@@ -315,7 +315,7 @@ export async function getMemberDetail(userId: string): Promise<MemberDetail | nu
   const { data, error } = await db.auth.admin.getUserById(userId);
   if (error || !data.user) return null;
 
-  const [orders, grants, access, productIds] = await Promise.all([
+  const [orders, grants, access, plans] = await Promise.all([
     db
       .from('orders')
       .select('*')
@@ -328,7 +328,7 @@ export async function getMemberDetail(userId: string): Promise<MemberDetail | nu
       .eq('user_id', userId)
       .order('granted_at', { ascending: false }),
     db.from('cbt_access').select('*').eq('user_id', userId).maybeSingle(),
-    entitlementProductIds(),
+    entitlementPlans(),
   ]);
   if (orders.error) throw new Error(`주문 조회 실패: ${orders.error.message}`);
 
@@ -337,7 +337,7 @@ export async function getMemberDetail(userId: string): Promise<MemberDetail | nu
   const accessRow = (access.data ?? null) as AccessRow | null;
 
   return {
-    member: summarizeMember(data.user, orderRows, grantRows, accessRow, productIds),
+    member: summarizeMember(data.user, orderRows, grantRows, accessRow, plans),
     orders: orderRows,
     grants: grantRows,
     access: accessRow,

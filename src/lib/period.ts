@@ -1,10 +1,13 @@
 // 서비스 제공기간(토스 심사 기준: 결제일로부터 최대 기간을 상세·결제 화면에 명시).
 // 자료·한글놀이 이용권·강의는 6개월, CBT 연습앱 이용권만 3개월(2026-10-03).
+// 한글놀이 이용권은 6개월·12개월 두 가지(2026-10-17, products.ts PRODUCT_ALIASES).
+export const periodLabel = (months: number) => `결제일로부터 ${months}개월`;
+
 export const SERVICE_PERIOD_MONTHS = 6;
-export const SERVICE_PERIOD_LABEL = `결제일로부터 ${SERVICE_PERIOD_MONTHS}개월`;
+export const SERVICE_PERIOD_LABEL = periodLabel(SERVICE_PERIOD_MONTHS);
 
 export const CBT_PERIOD_MONTHS = 3;
-export const CBT_PERIOD_LABEL = `결제일로부터 ${CBT_PERIOD_MONTHS}개월`;
+export const CBT_PERIOD_LABEL = periodLabel(CBT_PERIOD_MONTHS);
 
 const KST = 9 * 60 * 60 * 1000;
 

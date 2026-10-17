@@ -294,21 +294,29 @@ export default function MyPageView({ data, download }: { data: MyPageData; downl
             href: '/slp-cbt-practice',
             action: '알아보기',
           },
-    data.hangul
+    data.hangul.ok
       ? {
           title: '한글놀이 이용권',
           state: 'active',
-          detail: '이용할 수 있어요',
+          detail: data.hangul.expiresAt ? `${formatKoreanDate(data.hangul.expiresAt)}까지` : '이용할 수 있어요',
           href: '/hangul',
           action: '한글놀이 열기',
         }
-      : {
-          title: '한글놀이 이용권',
-          state: 'none',
-          detail: '아직 없어요',
-          href: '/hangul',
-          action: '알아보기',
-        },
+      : data.hangul.expiresAt
+        ? {
+            title: '한글놀이 이용권',
+            state: 'ended',
+            detail: `${formatKoreanDate(data.hangul.expiresAt)}에 끝났어요`,
+            href: '/hangul',
+            action: '다시 구매하기',
+          }
+        : {
+            title: '한글놀이 이용권',
+            state: 'none',
+            detail: '아직 없어요',
+            href: '/hangul',
+            action: '알아보기',
+          },
   ];
 
   return (

@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ENTITLEMENT_PRODUCTS, isEntitlementActive } from '@/lib/entitlements';
+import { ENTITLEMENT_PRODUCTS, isGrantActive } from '@/lib/entitlements';
 import { formatKoreanDate } from '@/lib/period';
 import { nextDeviceMoveAt } from '@/lib/cbt-device';
 import type { MemberDetail } from '@/lib/admin-data';
@@ -60,7 +60,7 @@ export default function MemberDetailView({ detail }: { detail: MemberDetail }) {
             {ENTITLEMENT_PRODUCTS.map(({ alias, label }) => {
               const sources = member.entitlements[alias];
               const activeGrant = grants.find(
-                (g) => g.product === alias && !g.revoked_at && isEntitlementActive(alias, g.granted_at),
+                (g) => g.product === alias && !g.revoked_at && isGrantActive(alias, g.granted_at),
               );
               const expiresAt = member.expiresAt[alias];
               const until = expiresAt ? formatKoreanDate(new Date(expiresAt)) : null;

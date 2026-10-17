@@ -4,7 +4,7 @@
 // 매 액션마다 관리자 세션을 다시 확인하고, 입력은 전부 검증한다.
 import { revalidatePath, revalidateTag } from 'next/cache';
 import { getAdminUser } from '@/lib/admin';
-import { isEntitlementActive, isEntitlementAlias } from '@/lib/entitlements';
+import { isEntitlementAlias, isGrantActive } from '@/lib/entitlements';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getFreeLive } from '@/data/freeLives';
 import { NOTION_CACHE_TAG } from '@/lib/notion';
@@ -55,8 +55,8 @@ export async function grantEntitlement(formData: FormData) {
     .is('revoked_at', null);
   if (existing.error) throw new Error(`지급 실패: ${existing.error.message}`);
 
-  // 기간이 끝난 지급은 없는 것으로 보고 새로 지급한다(CBT는 지급일부터 3개월).
-  if (!(existing.data ?? []).some((g) => isEntitlementActive(product, g.granted_at))) {
+  // 기간이 끝난 지급은 없는 것으로 보고 새로 지급한다(CBT는 지급일부터 3개월, 한글놀이 12개월).
+  if (!(existing.data ?? []).some((g) => isGrantActive(product, g.granted_at))) {
     const { error } = await db.from('entitlement_grants').insert({ user_id: userId, product, note });
     if (error) throw new Error(`지급 실패: ${error.message}`);
   }

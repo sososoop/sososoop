@@ -32,14 +32,17 @@ const CLIPS = {
 } as const;
 type Clip = (typeof CLIPS)[keyof typeof CLIPS];
 
+// 이용권 옵션 하나(6개월·12개월). 가격은 cartItem.price(Notion).
+export type HangulPlan = { months: number; checkoutHref: string; cartItem: CartItem };
+
 type Props = {
   state: 'anonymous' | 'unpaid';
-  periodLabel: string;
+  plans: HangulPlan[];
   notes: string[];
-  checkoutHref: string;
-  cartItem?: CartItem | null;
   loginHref: string;
 };
+
+const won = (n: number) => `${n.toLocaleString()}원`;
 
 const BTN =
   'inline-flex items-center justify-center px-6 py-3 border-2 border-[#141414] text-[16px] font-black transition-colors active:translate-x-[2px] active:translate-y-[2px]';
@@ -163,10 +166,13 @@ const STILLS = [
   },
 ];
 
-export default function HangulLanding({ state, periodLabel, notes, checkoutHref, cartItem, loginHref }: Props) {
-  const price = cartItem?.price ? `${cartItem.price.toLocaleString()}원` : null;
-  const cart = (extra = '') =>
-    cartItem ? <AddToCartButton item={cartItem} className={`${BTN} bg-white hover:bg-[#F2FF8F] ${extra}`} /> : null;
+export default function HangulLanding({ state, plans, notes, loginHref }: Props) {
+  const minPrice = plans.length ? Math.min(...plans.map((p) => p.cartItem.price)) : null;
+  const periods = plans.map((p) => `${p.months}개월`).join(' · ') || '6개월';
+  // 12개월이 6개월 두 번보다 얼마나 싼지
+  const six = plans.find((p) => p.months === 6);
+  const year = plans.find((p) => p.months === 12);
+  const yearSaving = six && year ? six.cartItem.price * 2 - year.cartItem.price : 0;
 
   return (
     <div className="text-[#141414]">
@@ -202,10 +208,9 @@ export default function HangulLanding({ state, periodLabel, notes, checkoutHref,
             </div>
 
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link href={checkoutHref} className={`${BTN} text-white`} style={{ background: C.blue }}>
-                이용권 구매하기{price ? ` · ${price}` : ''}
-              </Link>
-              {cart()}
+              <a href="#plans" className={`${BTN} text-white`} style={{ background: C.blue }}>
+                이용권 고르기{minPrice ? ` · ${won(minPrice)}부터` : ''}
+              </a>
               <span className="inline-flex items-center gap-2.5">
                 <a href={HANGUL_TRIAL_URL} target="_blank" rel="noopener noreferrer" className={`${BTN} hover:bg-[#F2FF8F]`} style={{ background: C.lime }}>
                   무료 체험판 써 보기 →
@@ -219,7 +224,7 @@ export default function HangulLanding({ state, periodLabel, notes, checkoutHref,
               </Link>
             )}
             <p className="mt-4 text-[13px]" style={{ color: C.gray }}>
-              이용권 구매 후 이용할 수 있는 유료 서비스예요 · 이용기간 {periodLabel} · 설치 없이 브라우저에서
+              이용권 구매 후 이용할 수 있는 유료 서비스예요 · 이용기간 {periods} 중 선택 · 설치 없이 브라우저에서
             </p>
           </div>
           <div>
@@ -416,9 +421,9 @@ export default function HangulLanding({ state, periodLabel, notes, checkoutHref,
               <a href={HANGUL_TRIAL_URL} target="_blank" rel="noopener noreferrer" className={`${BTN} px-7 py-3.5 text-[17px] hover:bg-[#F2FF8F]`} style={{ background: C.lime }}>
                 무료 체험판 써 보기 →
               </a>
-              <Link href={checkoutHref} className={`${BTN} px-7 py-3.5 text-[17px] text-white`} style={{ background: C.blue }}>
-                이용권 구매하기
-              </Link>
+              <a href="#plans" className={`${BTN} px-7 py-3.5 text-[17px] text-white`} style={{ background: C.blue }}>
+                이용권 고르기
+              </a>
             </div>
             <p className="mt-5 text-[13px] [word-break:keep-all]" style={{ color: C.gray }}>
               헷갈리는 짝 · 사전 예문 문장 · 무의미 단어 · 글자잡기 · 아동별 프로필 · 가정과제 링크는 정식판에서 쓸 수 있어요.
@@ -441,19 +446,48 @@ export default function HangulLanding({ state, periodLabel, notes, checkoutHref,
               ))}
             </ul>
           </div>
-          <div className="bg-white border-2 border-[#141414] p-8 text-center lg:sticky lg:top-6" style={SH(C.lime, 8)}>
-            <p className="text-[16px] font-black mb-1">한글놀이 이용권</p>
-            {price && <p className="text-[32px] font-black tracking-tight mb-2">{price}</p>}
-            <p className="text-[14px] text-ink-muted leading-relaxed mb-6">
+          <div id="plans" className="scroll-mt-20 bg-white border-2 border-[#141414] p-7 text-center lg:sticky lg:top-6" style={SH(C.lime, 8)}>
+            <p className="text-[18px] font-black mb-1">한글놀이 이용권</p>
+            <p className="text-[13.5px] text-ink-muted leading-relaxed mb-5 [word-break:keep-all]">
               {state === 'anonymous'
                 ? '구매 후 소소숲 계정으로 로그인하면 이 페이지에서 바로 시작할 수 있어요.'
                 : '이용권을 구매하면 이 페이지에서 바로 시작할 수 있어요.'}
             </p>
-            <Link href={checkoutHref} className={`${BTN} w-full text-white`} style={{ background: C.blue }}>
-              이용권 구매하기
-            </Link>
-            {cart('w-full mt-2.5')}
-            <p className="mt-3 text-[12px] text-ink-light">이용기간: {periodLabel}</p>
+            <div className="flex flex-col gap-4 text-left">
+              {plans.map((p) => {
+                const best = p.months === 12 && plans.length > 1;
+                return (
+                  <div
+                    key={p.months}
+                    className="relative border-2 border-[#141414] p-4"
+                    style={{ background: best ? C.limeSoft : '#fff' }}
+                  >
+                    {best && (
+                      <span className="absolute -top-3 right-3 border-2 border-[#141414] px-2 py-0.5 text-[12px] font-black text-white" style={{ background: C.blue }}>
+                        추천
+                      </span>
+                    )}
+                    <div className="flex items-baseline justify-between gap-2">
+                      <span className="text-[17px] font-black">{p.months}개월</span>
+                      <span className="text-[26px] font-black tracking-tight">{won(p.cartItem.price)}</span>
+                    </div>
+                    <p className="mt-0.5 text-[12.5px] font-bold text-right" style={{ color: C.gray }}>
+                      한 달 약 {won(Math.round(p.cartItem.price / p.months))}
+                    </p>
+                    {best && yearSaving > 0 && (
+                      <p className="mt-1.5 text-[13px] font-extrabold" style={{ color: C.blueDark }}>
+                        6개월 두 번보다 {won(yearSaving)} 아껴요
+                      </p>
+                    )}
+                    <Link href={p.checkoutHref} className={`${BTN} mt-3 w-full text-white`} style={{ background: C.blue }}>
+                      {p.months}개월 이용권 구매하기
+                    </Link>
+                    <AddToCartButton item={p.cartItem} className={`${BTN} mt-2 w-full bg-white hover:bg-[#F2FF8F]`} />
+                  </div>
+                );
+              })}
+            </div>
+            <p className="mt-4 text-[12px] text-ink-light">이용기간: 결제일로부터 {periods} 중 고른 기간</p>
             <a href={HANGUL_TRIAL_URL} target="_blank" rel="noopener noreferrer" className="inline-block mt-4 text-[13px] font-bold underline" style={{ color: C.blue }}>
               먼저 무료 체험판 써 보기 →
             </a>

@@ -5,7 +5,7 @@
 import { getResources, getLectures } from '@/lib/notion';
 import { freeResources, paidResources, type Resource } from '@/data/resources';
 import { lectures as staticLectures, type Lecture } from '@/data/lectures';
-import { CBT_PERIOD_LABEL, SERVICE_PERIOD_LABEL } from '@/lib/period';
+import { CBT_PERIOD_MONTHS, SERVICE_PERIOD_MONTHS, periodLabel } from '@/lib/period';
 
 export type Purchasable = {
   id: string;
@@ -15,20 +15,29 @@ export type Purchasable = {
   kind: 'resource' | 'lecture';
 };
 
-// 상품 id 대신 쓰는 고정 별칭 → Notion 상품 제목.
+// 상품 id 대신 쓰는 고정 별칭 → Notion 상품 제목(들)과 이용기간(개월).
 // (/checkout?product=cbt 같은 URL을 Notion 페이지 UUID와 무관하게 유지하기 위함)
+// 한글놀이는 2026-10-17부터 6개월·12개월 두 상품. 6개월은 예전 제목('한글놀이 이용권')도 인정한다.
 const CBT_TITLE = '언어재활사 CBT 연습앱 이용권';
-const HANGUL_TITLE = '한글놀이 이용권';
-const ALIAS_TITLES: Record<string, string> = {
-  cbt: CBT_TITLE,
-  hangul: HANGUL_TITLE,
-};
+export const PRODUCT_ALIASES = {
+  cbt: { titles: [CBT_TITLE], months: CBT_PERIOD_MONTHS },
+  hangul: { titles: ['한글놀이 이용권 6개월', '한글놀이 이용권'], months: 6 },
+  hangul12: { titles: ['한글놀이 이용권 12개월'], months: 12 },
+} as const satisfies Record<string, { titles: readonly string[]; months: number }>;
+export type ProductAlias = keyof typeof PRODUCT_ALIASES;
 
-// 별칭이면 유료 자료 목록에서 같은 제목의 상품 id로 바꿔준다.
+function isProductAlias(value: string): value is ProductAlias {
+  return Object.prototype.hasOwnProperty.call(PRODUCT_ALIASES, value);
+}
+
+// 별칭이면 유료 자료 목록에서 같은 제목의 상품 id로 바꿔준다(제목 순서대로 먼저 찾은 것).
 function resolveAlias(rawId: string, paid: Resource[]): string {
-  const title = ALIAS_TITLES[rawId];
-  if (!title) return rawId;
-  return paid.find((r) => r.title === title)?.id ?? rawId;
+  if (!isProductAlias(rawId)) return rawId;
+  for (const title of PRODUCT_ALIASES[rawId].titles) {
+    const found = paid.find((r) => r.title === title);
+    if (found) return found.id;
+  }
+  return rawId;
 }
 
 async function loadResources(): Promise<Resource[]> {
@@ -69,11 +78,32 @@ export async function getPurchasable(
   return pickResource(paid, id) ?? pickLecture(lects, id);
 }
 
-// 상품의 이용기간 문구. CBT 이용권만 3개월, 나머지는 6개월.
-export async function periodLabelFor(rawId: string): Promise<string> {
-  if (rawId === 'cbt') return CBT_PERIOD_LABEL;
+// 상품의 이용기간(개월). 별칭이 붙은 이용권은 그 기간, 나머지는 6개월.
+export async function periodMonthsFor(rawId: string): Promise<number> {
+  if (isProductAlias(rawId)) return PRODUCT_ALIASES[rawId].months;
   const paid = (await loadResources()).filter((r) => r.type === 'paid');
-  return resolveAlias('cbt', paid) === rawId ? CBT_PERIOD_LABEL : SERVICE_PERIOD_LABEL;
+  for (const alias of Object.keys(PRODUCT_ALIASES) as ProductAlias[]) {
+    if (resolveAlias(alias, paid) === rawId) return PRODUCT_ALIASES[alias].months;
+  }
+  return SERVICE_PERIOD_MONTHS;
+}
+
+// 상품의 이용기간 문구('결제일로부터 N개월').
+export async function periodLabelFor(rawId: string): Promise<string> {
+  return periodLabel(await periodMonthsFor(rawId));
+}
+
+// 별칭 → 실제 결제 상품 id(유료·가격 있는 것만). Notion 은 한 번만 읽는다.
+export async function aliasProductIds(
+  aliases: readonly ProductAlias[],
+): Promise<Partial<Record<ProductAlias, string>>> {
+  const paid = (await loadResources()).filter((r) => r.type === 'paid');
+  const out: Partial<Record<ProductAlias, string>> = {};
+  for (const alias of aliases) {
+    const found = pickResource(paid, resolveAlias(alias, paid));
+    if (found) out[alias] = found.id;
+  }
+  return out;
 }
 
 // 자료실 상세에서 CBT 이용권 상품인지(상세 섹션을 붙일지) 확인한다.
@@ -82,7 +112,7 @@ export async function isCbtProduct(id: string): Promise<boolean> {
   return resolveAlias('cbt', paid) === id;
 }
 
-// 이용권 소개 화면의 [장바구니 담기]용. 별칭(cbt·hangul)을 실제 상품 id로 풀어
+// 이용권 소개 화면의 [장바구니 담기]용. 별칭(cbt·hangul·hangul12)을 실제 상품 id로 풀어
 // 자료실 상세페이지에서 담은 것과 같은 상품으로 담기게 한다.
 export async function getCartItem(
   rawId: string,

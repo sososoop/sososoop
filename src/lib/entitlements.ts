@@ -2,10 +2,11 @@
 // 이용권은 두 곳에서 생긴다.
 //   1) 결제: orders 테이블에 status='DONE' 으로 기록된 주문
 //   2) 관리자 지급: entitlement_grants 테이블의 취소되지 않은 행
-// CBT는 결제일(지급일)부터 3개월만 쓸 수 있다(2026-10-03). 한글놀이는 아직 기간 검사가 없다.
+// 이용기간은 결제일(지급일)부터 센다. CBT 3개월(2026-10-03).
+// 한글놀이는 2026-10-17부터 상품에 따라 6개월·12개월, 관리자 지급은 12개월.
 // 조회는 RLS를 우회하는 service_role로 한다.
 import { createAdminClient } from '@/lib/supabase/admin';
-import { getPurchasable } from '@/lib/products';
+import { aliasProductIds, PRODUCT_ALIASES, type ProductAlias } from '@/lib/products';
 import { CBT_PERIOD_MONTHS, periodEnd } from '@/lib/period';
 
 export const ENTITLEMENT_PRODUCTS = [
@@ -19,6 +20,15 @@ export function isEntitlementAlias(value: string): value is EntitlementAlias {
   return ENTITLEMENT_PRODUCTS.some((p) => p.alias === value);
 }
 
+// 이용권별로 인정하는 결제 상품(별칭). 기간은 products.ts PRODUCT_ALIASES 에 있다.
+const PLAN_ALIASES: Record<EntitlementAlias, readonly ProductAlias[]> = {
+  hangul: ['hangul', 'hangul12'],
+  cbt: ['cbt'],
+};
+
+// 관리자 지급 이용기간(개월) — 지급일부터.
+const GRANT_MONTHS: Record<EntitlementAlias, number> = { hangul: 12, cbt: CBT_PERIOD_MONTHS };
+
 // product_slug 는 결제 상품 id(들)를 콤마로 연결한 문자열이다.
 export function slugIds(productSlug: unknown): string[] {
   return String(productSlug ?? '')
@@ -27,41 +37,60 @@ export function slugIds(productSlug: unknown): string[] {
     .filter(Boolean);
 }
 
-// 이용권 별칭 → 그 상품으로 인정되는 product_slug 값들.
-// 별칭은 결제 시점에 Notion 상품 UUID로 해석되어 저장되므로 별칭과 UUID 둘 다 포함한다.
-async function idsFor(alias: EntitlementAlias): Promise<string[]> {
-  const product = await getPurchasable(alias);
-  return product ? [alias, product.id] : [alias];
+// 이용권 별칭 → { 그 상품으로 인정되는 product_slug 값: 이용기간(개월) }.
+// 별칭은 결제 시점에 Notion 상품 UUID로 해석되어 저장되므로 별칭과 UUID 둘 다 넣는다.
+export type EntitlementPlans = Record<EntitlementAlias, Record<string, number>>;
+
+async function plansFor(alias: EntitlementAlias): Promise<Record<string, number>> {
+  const ids = await aliasProductIds(PLAN_ALIASES[alias]);
+  const out: Record<string, number> = {};
+  for (const plan of PLAN_ALIASES[alias]) {
+    const months = PRODUCT_ALIASES[plan].months;
+    out[plan] = months;
+    const id = ids[plan];
+    if (id) out[id] = Math.max(out[id] ?? 0, months);
+  }
+  return out;
 }
 
-export async function entitlementProductIds(): Promise<Record<EntitlementAlias, string[]>> {
+export async function entitlementPlans(): Promise<EntitlementPlans> {
   const entries = await Promise.all(
-    ENTITLEMENT_PRODUCTS.map(async ({ alias }) => [alias, await idsFor(alias)] as const),
+    ENTITLEMENT_PRODUCTS.map(async ({ alias }) => [alias, await plansFor(alias)] as const),
   );
-  return Object.fromEntries(entries) as Record<EntitlementAlias, string[]>;
+  return Object.fromEntries(entries) as EntitlementPlans;
 }
 
-// 이용권별 이용기간(개월). 없으면 기간 검사를 하지 않는다.
-const PERIOD_MONTHS: Partial<Record<EntitlementAlias, number>> = { cbt: CBT_PERIOD_MONTHS };
-
-// 결제일·지급일에서 이 이용권이 끝나는 시각. 기간 검사가 없는 이용권은 null(계속).
-export function entitlementEnd(alias: EntitlementAlias, startedAt: string): Date | null {
-  const months = PERIOD_MONTHS[alias];
-  return months ? periodEnd(startedAt, months) : null;
+// 이용권 별칭 → 그 상품으로 인정되는 product_slug 값들.
+export async function entitlementProductIds(): Promise<Record<EntitlementAlias, string[]>> {
+  const plans = await entitlementPlans();
+  return Object.fromEntries(
+    Object.entries(plans).map(([alias, ids]) => [alias, Object.keys(ids)]),
+  ) as Record<EntitlementAlias, string[]>;
 }
 
-export function isEntitlementActive(
-  alias: EntitlementAlias,
-  startedAt: string,
-  now = Date.now(),
-): boolean {
-  const end = entitlementEnd(alias, startedAt);
-  return !end || end.getTime() > now;
+// 결제 한 건으로 이 이용권을 쓸 수 있는 마지막 시각. 이 이용권 상품이 없는 주문이면 null.
+// 한 주문에 기간이 다른 상품이 같이 있으면 긴 쪽으로 본다.
+export function orderEnd(
+  plans: Record<string, number>,
+  productSlug: unknown,
+  paidAt: string,
+): Date | null {
+  const months = Math.max(0, ...slugIds(productSlug).map((id) => plans[id] ?? 0));
+  return months ? periodEnd(paidAt, months) : null;
+}
+
+// 관리자 지급 한 건이 끝나는 시각.
+export function grantEnd(alias: EntitlementAlias, grantedAt: string): Date {
+  return periodEnd(grantedAt, GRANT_MONTHS[alias]);
+}
+
+export function isGrantActive(alias: EntitlementAlias, grantedAt: string, now = Date.now()): boolean {
+  return grantEnd(alias, grantedAt).getTime() > now;
 }
 
 export type EntitlementStatus = {
   ok: boolean;
-  // 기간이 있는 이용권: 가장 늦게 끝나는 날(이미 끝났으면 끝난 날). 기간 검사가 없거나 산 적이 없으면 null.
+  // 가장 늦게 끝나는 날(이미 끝났으면 끝난 날). 산 적이 없으면 null.
   expiresAt: Date | null;
 };
 
@@ -74,8 +103,8 @@ async function getEntitlement(
   const admin = createAdminClient();
   if (!admin) return none;
 
-  const [ids, orders, grants] = await Promise.all([
-    idsFor(alias),
+  const [plans, orders, grants] = await Promise.all([
+    plansFor(alias),
     admin
       .from('orders')
       .select('product_slug, created_at')
@@ -89,22 +118,21 @@ async function getEntitlement(
       .is('revoked_at', null),
   ]);
 
-  // 이용을 시작한 때 = 결제일 또는 지급일
-  const starts: string[] = [];
+  // 결제·지급 한 건마다 끝나는 날
+  const ends: Date[] = [];
   if (!orders.error) {
     for (const row of orders.data ?? []) {
-      if (slugIds(row.product_slug).some((id) => ids.includes(id))) starts.push(row.created_at);
+      const end = orderEnd(plans, row.product_slug, row.created_at);
+      if (end) ends.push(end);
     }
   }
   // 지급 테이블이 아직 없으면(SQL 미실행) 에러가 난다 → 지급 없음으로 본다.
   if (!grants.error) {
-    for (const row of grants.data ?? []) starts.push(row.granted_at);
+    for (const row of grants.data ?? []) ends.push(grantEnd(alias, row.granted_at));
   }
-  if (starts.length === 0) return none;
+  if (ends.length === 0) return none;
 
-  const ends = starts.map((start) => entitlementEnd(alias, start));
-  if (ends.some((end) => end === null)) return { ok: true, expiresAt: null };
-  const latest = new Date(Math.max(...ends.map((end) => (end as Date).getTime())));
+  const latest = new Date(Math.max(...ends.map((end) => end.getTime())));
   return { ok: latest.getTime() > Date.now(), expiresAt: latest };
 }
 
@@ -116,6 +144,11 @@ export function getCbtEntitlement(userId: string | undefined | null): Promise<En
 // CBT 연습앱 이용권 보유 여부.
 export async function hasCbtEntitlement(userId: string | undefined | null): Promise<boolean> {
   return (await getEntitlement(userId, 'cbt')).ok;
+}
+
+// 한글놀이 이용권 상태 — 이용 가능 여부와 끝나는 날.
+export function getHangulEntitlement(userId: string | undefined | null): Promise<EntitlementStatus> {
+  return getEntitlement(userId, 'hangul');
 }
 
 // 한글놀이 이용권 보유 여부.

@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { isAdmin } from '@/lib/admin';
 import { hasHangulEntitlement } from '@/lib/entitlements';
 import { getCartItem } from '@/lib/products';
-import HangulLanding from '@/components/hangul/HangulLanding';
+import HangulLanding, { type HangulPlan } from '@/components/hangul/HangulLanding';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,11 +15,21 @@ export const metadata: Metadata = {
 
 const NOTES = [
   '이용권을 구매한 소소숲 회원만 이용할 수 있습니다.',
-  '이용기간은 결제일로부터 6개월입니다.',
+  '이용기간은 결제일로부터 6개월 또는 12개월입니다(고른 이용권 기준).',
+  '이용 중에 다시 구매하면 새 결제일부터 기간을 다시 셉니다. 남은 기간과 합쳐지지 않으니 끝날 즈음 구매해 주세요.',
   'PC·태블릿·스마트폰 모두 브라우저에서 바로 실행되며, 설치할 프로그램이 없습니다.',
   '아동 이름·진도는 서버가 아니라 사용하는 기기에만 저장됩니다.',
   '이용기간 중 기능이 추가·개선되어도 추가 비용은 없습니다.',
 ];
+
+// 이용권 옵션(2026-10-17~): 6개월 · 12개월. 가격은 Notion 상품에서 읽는다.
+async function hangulPlans(): Promise<HangulPlan[]> {
+  const [six, twelve] = await Promise.all([getCartItem('hangul'), getCartItem('hangul12')]);
+  const plans: HangulPlan[] = [];
+  if (six) plans.push({ months: 6, checkoutHref: '/checkout?product=hangul', cartItem: six });
+  if (twelve) plans.push({ months: 12, checkoutHref: '/checkout?product=hangul12', cartItem: twelve });
+  return plans;
+}
 
 export default async function HangulPage() {
   const supabase = await createClient();
@@ -35,10 +45,8 @@ export default async function HangulPage() {
     return (
       <HangulLanding
         state={user ? 'unpaid' : 'anonymous'}
-        periodLabel="6개월"
+        plans={await hangulPlans()}
         notes={NOTES}
-        checkoutHref="/checkout?product=hangul"
-        cartItem={await getCartItem('hangul')}
         loginHref="/login?next=/hangul"
       />
     );
